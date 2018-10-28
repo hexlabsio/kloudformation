@@ -81,7 +81,7 @@ object Inverter{
             end: String = "",
             separator: String = ", ",
             firstIncluded: Boolean = false,
-            conversion: (S) -> String
+            conversion: (S) -> String = { "$it" }
     ): String = foldIndexed(start){ index, acc, item ->
         conversion(item).let { text -> "$acc${ if((index>0 || firstIncluded) && text.isNotEmpty()) separator else "" }$text" }
     } + end
@@ -89,6 +89,7 @@ object Inverter{
     private class StackInverter(
             private val staticImports: MutableList<Pair<String, String>> = mutableListOf(),
             private val parameters: MutableMap<String, JsonNode> = mutableMapOf(),
+            private val mappings: MutableMap<String, JsonNode> = mutableMapOf(),
             private val resources: MutableMap<String, JsonNode> = mutableMapOf()
     ): StdDeserializer<FileSpec>(FileSpec::class.java) {
 
@@ -134,6 +135,7 @@ object Inverter{
             val resourceText = resource.textValue()
             this + Att::class
             val attResource = if((parameters.keys + resources.keys).contains(resourceText)){
+                refBuilder.refs += resourceText
                 resourceText.decapitalize() + ".logicalName"
             }
             else {
@@ -161,6 +163,7 @@ object Inverter{
 
         private fun CodeBuilder.refFrom(refItem: String, expectedType: ResourceTypeInfo, explicit: Boolean = false) =
             if((parameters.keys + resources.keys).contains(refItem)) {
+                refBuilder.refs += refItem
                 if(expectedType.rawType == "kotlin.String")  "${refItem.decapitalize()}.ref()"
                 else {
                     this + Reference::class
@@ -180,7 +183,7 @@ object Inverter{
                     else -> null
                 }
                 if(special != null){
-                    staticImports.add("io.kloudformation.model.KloudFormationTemplate.Builder.Companion" to special)
+                    staticImports.add("io.kloudformation.model.KloudFormationTemplate.Builder.Companion" to special.substringBeforeLast("()"))
                     special
                 }
                 else {
@@ -278,43 +281,89 @@ object Inverter{
                 } + if(parameters.isNotEmpty()) "\n" else ""
         )
 
-        private fun CodeBuilder.codeForResources() = codeFrom(
-            resources.accumulate(separator = "\n"){ (name, resource) ->
+        private fun CodeBuilder.codeForMappings(): CodeBlock = codeFrom(
+                if(mappings.isNotEmpty()){
+                    mappings.accumulate("mappings(\n%>", "\n%<)\n", separator = ",\n"){
+                        (name, node) ->
+                        this + name
+                        "%S to " + node.fieldsAsMap().accumulate("mapOf(\n%>", "\n%<)", ",\n"){
+                            (secondName, secondNode) ->
+                            this + secondName
+                            "%S to " + secondNode.fieldsAsMap().accumulate("mapOf(\n%>", "\n%<)", ",\n"){
+                                (leafName, leafNode) ->
+                                this + leafName
+                                "%S to " + valueString(leafNode)
+                            }
+                        }
+                    }
+                }
+                else ""
+        )
+
+        private fun codeForResources(): CodeBlock = reorder(
+                resources.map{ (name, resource) ->
                 val (_, typeInfo) = resource.resourceTypeInfo(name)
                 val functionName = typeInfo.name.decapitalize()
                 staticImports.add(typeInfo.canonicalPackage to functionName)
-                this + name
-                val required = typeInfo.required.accumulate("val ${name.decapitalize()} = $functionName(logicalName = %S", ")", firstIncluded = true) {
+                val codeBuilder = CodeBuilder(refBuilder = RefBuilder(name = name))
+                codeBuilder + name
+                val required = typeInfo.required.accumulate("$functionName(logicalName = %S", ")", firstIncluded = true) {
                     (propertyName, propertyType) ->
-                    "$propertyName = " + createFunctionFrom(resource.properties(), propertyName, propertyType)
+                    "$propertyName = " + codeBuilder.createFunctionFrom(resource.properties(), propertyName, propertyType)
                 }
                 val notRequired = typeInfo.notRequired.accumulate(separator = "\n") {
                     (propertyName, propertyType) ->
-                    createFunctionFrom(resource.properties(), propertyName, propertyType)
+                    codeBuilder.createFunctionFrom(resource.properties(), propertyName, propertyType)
                 }
-                required + if(notRequired.isEmpty())"" else "{\n%>$notRequired\n%<}"
+                codeBuilder.refBuilder = codeBuilder.refBuilder.copy(code = required + if(notRequired.isEmpty())"" else "{\n%>$notRequired\n%<}")
+                codeBuilder
             }
         )
 
         private fun functionForTemplate(node: JsonNode): FunSpec {
             parameters.putAll(node.mapFromFieldNamed("Parameters"))
+            mappings.putAll(node.mapFromFieldNamed("Mappings"))
             resources.putAll(node.mapFromFieldNamed("Resources"))
             return FunSpec.builder(functionName)
                     .returns(KloudFormationTemplate::class)
                     .addCode("return %T.create {\n%>%>", KloudFormationTemplate::class)
                     .addCode(CodeBuilder().codeForParameters())
-                    .addCode(CodeBuilder().codeForResources())
+                    .addCode(CodeBuilder().codeForMappings())
+                    .addCode(codeForResources())
                     .addCode("\n%<}\n%<")
                     .build()
         }
 
         private fun classForTemplate(node: JsonNode) = TypeSpec.objectBuilder(className).addFunction(functionForTemplate(node)).build()
 
-        private inner class CodeBuilder(private val objectList: MutableList<Any> = mutableListOf()){
+        private data class RefBuilder(
+                val name: String = "",
+                val code: String = "",
+                val refs: MutableList<String> = mutableListOf()
+        )
+
+        private inner class CodeBuilder(val objectList: MutableList<Any> = mutableListOf(), var refBuilder: RefBuilder = RefBuilder()){
             operator fun plus(item: Any) = objectList.add(item)
             fun codeFrom(code: String): CodeBlock{
                 return CodeBlock.of(code, *objectList.toTypedArray())
             }
+        }
+
+        fun reorder(codeBuilders: List<CodeBuilder>): CodeBlock{
+            val codeBlocks = codeBuilders.toMutableList()
+            val refCounts = codeBlocks.map { item -> item.refBuilder.name to codeBlocks.count { it.refBuilder.refs.contains(item.refBuilder.name) } }.toMap()
+            codeBlocks.sortWith(Comparator { a, b ->
+                val bDepsA = a.refBuilder.refs.contains(b.refBuilder.name)
+                val aDepsB = b.refBuilder.refs.contains(a.refBuilder.name)
+                if(bDepsA && aDepsB || (!bDepsA && !aDepsB)) 0
+                else if(bDepsA) 1 else -1
+            })
+            return CodeBlock.builder().also { builder ->
+                codeBlocks.forEach{ codeBlock ->
+                    val code = if(refCounts[codeBlock.refBuilder.name] == 0) codeBlock.refBuilder.code
+                    else "val ${codeBlock.refBuilder.name.decapitalize()} = ${codeBlock.refBuilder.code}"
+                    builder.add(code + "\n", *codeBlock.objectList.toTypedArray()) }
+            }.build()
         }
 
         override fun deserialize(parser: JsonParser, context: DeserializationContext): FileSpec =
