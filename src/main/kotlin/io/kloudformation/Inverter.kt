@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.squareup.kotlinpoet.*
@@ -30,7 +31,7 @@ object Inverter{
     data class ResourceInfo(val type: String, val canonicalPackage: String, val name: String, val required: Map<String, ResourceTypeInfo>, val notRequired: Map<String, ResourceTypeInfo>)
     data class ResourceTypeInfo(val rawType: String = "", val canonicalPackage: String? = null, val className: String? = null, val required: Boolean = true, val valueType: Boolean = false, val list: Boolean = false, val map: Boolean = false, val parameterA: ResourceTypeInfo? = null, val parameterB: ResourceTypeInfo? = null)
     fun invert(template: String): FileSpec =
-            ObjectMapper()
+            ObjectMapper(YAMLFactory())
             .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter()))
             .readValue(template)
 
@@ -115,14 +116,26 @@ object Inverter{
             it to ( resourceInfo[it] ?: throw InverterException("Did not have enough information to discover type $it"))
         } ?: throw IllegalArgumentException("Could not read type of resource with logical name $name")
 
-        private fun CodeBuilder.valueTypeFor(value: JsonNode, expectedType: ResourceTypeInfo): String{
-            return if(expectedType.list){
-                val items = if(value.isArray) value.elementsAsList() else listOf(value)
-                items.accumulate("+listOf(\n%>", "\n%<)", ",\n") { value(it,expectedTypeInfo = expectedType.parameterA!!) }
-            } else when(expectedType.rawType){
-                    "kotlin.String" -> { this + value.asText(); "+%S"}
+        private fun CodeBuilder.valueTypeFor(value: JsonNode, expectedType: ResourceTypeInfo) =
+            when {
+                expectedType.list -> {
+                    val items = if (value.isArray) value.elementsAsList() else listOf(value)
+                    items.accumulate("+listOf(", ")") {
+                        value(it, expectedTypeInfo = expectedType.parameterA!!)
+                    }
+                }
+                expectedType.map -> {
+                    value.fieldsAsMap().accumulate("+mapOf(\n%>", "\n%<", ",\n") { (name, node) ->
+                        this + name
+                        "%S to " + value(node, expectedTypeInfo = expectedType.parameterB!!)
+                    }
+                }
+                else -> when (expectedType.rawType) {
+                    "kotlin.String" -> {
+                        this + value.asText(); "+%S"
+                    }
                     else -> {
-                        this + Value.Of::class
+                        this + io.kloudformation.Value.Of::class
                         "%T(${value.asText()})"
                     }
                 }
@@ -149,7 +162,9 @@ object Inverter{
             val (splitter, items) = node.elementsAsList()
             return if(splitter.asText().isEmpty()){
                 staticImports.add("$kPackage.function" to "plus")
-                items.elementsAsList().map { valueString(it, true) }.accumulate(separator = " +\n") { it }
+                val joinItems = items.elementsAsList()
+                val separator = if(joinItems.size > 4) " +\n" else " + "
+                joinItems.map { valueString(it, true) }.accumulate(separator = separator) { it }
             } else {
                 this + Join::class
                 "%T(${splitter.asText()}, ${ items.elementsAsList().map { valueString(it) }.accumulate("listOf(\n%>", "\n%<)", separator = ", \n") { it }})"
@@ -207,7 +222,7 @@ object Inverter{
         private fun CodeBuilder.ifFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
             val (condition, ifTrue, ifFalse) = node.elementsAsList()
             this + If::class
-            this + condition
+            this + condition.textValue()
             val newExpectedType = "$kPackage.Value<${expectedType.rawType}>".propertyInfo(expectedType.required)
             return "%T(%S, ${value(ifTrue,expectedTypeInfo = newExpectedType)}, ${value(ifFalse,expectedTypeInfo = newExpectedType)})"
         }
@@ -215,7 +230,7 @@ object Inverter{
         private fun CodeBuilder.rawTypeFrom(node: JsonNode, propertyName: String? = null, expectedType: ResourceTypeInfo, explicit: Boolean = false) =
             if(node.isObject){
                 val (name, properties) = node.fields().next()
-                when(name){
+                when (name) {
                     "Fn::Join" -> joinFrom(properties)
                     "Fn::If" -> ifFrom(properties, expectedType)
                     "Fn::FindInMap" -> findInMapFrom(properties)
@@ -231,14 +246,124 @@ object Inverter{
                 if(propertyName != null && !expectedType.required) "$propertyName($it)" else it
             }
 
+        private fun CodeBuilder.actionsFrom(node: JsonNode, positive: Boolean): String{
+            val value = if(node.isTextual && node.asText() == "*") {
+                if(positive){
+                    staticImports += "$kPackage.model.iam" to "allActions"
+                    "allActions"
+                } else {
+                    staticImports += "$kPackage.model.iam" to "noActions"
+                    "noActions"
+                }
+            }
+            else{
+                val items = (if(node.isArray) node.elementsAsList() else listOf(node))
+                if(items.size == 1) {
+                    val name = if(positive) "action" else "notAction"
+                    staticImports += "$kPackage.model.iam" to name
+                    "$name(\"${items.first().textValue()}\")"
+                }
+                else {
+                    val name = if(positive) "actions" else "notActions"
+                    staticImports += "$kPackage.model.iam" to name
+                    "$name(${items.accumulate { "\"" + it.textValue() + "\"" }})"
+                }
+            }
+            return "action = $value"
+        }
+        private fun CodeBuilder.resourcesFrom(node: JsonNode, positive: Boolean): String{
+            val value = if(node.isTextual && node.asText() == "*") {
+                if(positive){
+                    staticImports += "$kPackage.model.iam" to "allResources"
+                    "allResources"
+                } else {
+                    staticImports += "$kPackage.model.iam" to "noResources"
+                    "noResources"
+                }
+            }
+            else{
+                val items = (if(node.isArray) node.elementsAsList() else listOf(node))
+                if(items.size == 1) {
+                    val name = if(positive) "resource" else "notResource"
+                    staticImports += "$kPackage.model.iam" to name
+                    "$name(${valueString(items.first())})"
+                }
+                else {
+                    val name = if(positive) "resources" else "notResources"
+                    staticImports += "$kPackage.model.iam" to name
+                    "$name(${items.accumulate { valueString(items.first()) }})"
+                }
+            }
+            return "resource = $value"
+        }
+        private fun CodeBuilder.principalFrom(node: JsonNode, positive: Boolean): String{
+            return if(node.isTextual && node.asText() == "*") {
+                if(positive){
+                    staticImports += "$kPackage.model.iam" to "allPrincipals"
+                    "allPrincipals"
+                } else {
+                    staticImports += "$kPackage.model.iam" to "noPrincipals"
+                    "noPrincipals"
+                }
+            }
+            else{
+                val (principalType, principalNodes)  = node.fields().next()
+                val principals = if(principalNodes.isArray) principalNodes.elementsAsList() else listOf(principalNodes)
+                "${if(!positive)"notP" else "p"}rincipal(PrincipalType.${principalType.toUpperCase()}, listOf(${principals.accumulate { valueString(it) }}))"
+            }
+        }
+
+        private fun CodeBuilder.statementFrom(node: JsonNode): String{
+            val parameters = listOfNotNull(
+                    node["Sid"]?.textValue()?.let { "sid = \"$it\"" },
+                    (node["Action"])?.let { actionsFrom(it, true) },
+                    (node["NotAction"])?.let { actionsFrom(it, false) },
+                    (node["Resource"])?.let { resourcesFrom(it, true) },
+                    (node["NotResource"])?.let { resourcesFrom(it, false) },
+                    node["Effect"]?.textValue()?.let { "effect = IamPolicyEffect.$it" }
+            ).accumulate()
+            val body = listOfNotNull(
+                    node["Principal"]?.let { principalFrom(it, true) },
+                    node["NotPrincipal"]?.let { principalFrom(it, false) }
+                    //TODO Conditions
+            ).accumulate(separator = "\n")
+            return "statement($parameters){\n%>$body%<\n}\n"
+        }
+
+        private fun CodeBuilder.policyDocFrom(node: JsonNode): String{
+            listOf("IamPolicyEffect", "PrincipalType", "policyDocument").forEach{
+                staticImports.add("$kPackage.model.iam" to it)
+            }
+            val parameters = listOfNotNull(
+                    node["Id"]?.textValue()?.let { "id = \"$it\"" },
+                    node["Version"]?.textValue()?.let { "version = \"$it\"" }
+            ).accumulate()
+            val statements = node["Statement"]?.let {  if(it.isArray) it.elementsAsList() else listOf(it) }.orEmpty()
+            val body = statements.accumulate(separator = "\n"){ statementFrom(it) }
+            return "policyDocument($parameters){\n%>$body%<}\n"
+        }
+
+        private fun isValueJsonNode(expectedType: ResourceTypeInfo) = expectedType.valueType && expectedType.parameterA?.rawType?.contains("JsonNode") == true
+
+
         private fun CodeBuilder.value(node: JsonNode, propertyName: String? = null, expectedTypeInfo: ResourceTypeInfo, explicit: Boolean = false): String {
-            return if(expectedTypeInfo.valueType && expectedTypeInfo.parameterA != null)
-                rawTypeFrom(node, propertyName, expectedTypeInfo.parameterA, explicit)
+            return if(expectedTypeInfo.valueType && expectedTypeInfo.parameterA != null) {
+                if(isValueJsonNode(expectedTypeInfo)) policyDocFrom(node)
+                else rawTypeFrom(node, propertyName, expectedTypeInfo.parameterA, explicit)
+            }
             else if(expectedTypeInfo.list){
                 val start = if(propertyName != null && !expectedTypeInfo.required) "$propertyName(" else ""
                 val end = if(propertyName != null && !expectedTypeInfo.required) ")" else ""
                 (if(node.isArray) node.elementsAsList() else listOf(node)).accumulate("${start}listOf(\n%>", "%<)$end", ",\n") {
                     item -> value(item, expectedTypeInfo.parameterA?.className?.decapitalize(), expectedTypeInfo = expectedTypeInfo.parameterA!!, explicit = explicit)
+                }
+            } else if(expectedTypeInfo.map){
+                val start = if(propertyName != null && !expectedTypeInfo.required) "$propertyName(" else ""
+                val end = if(propertyName != null && !expectedTypeInfo.required) ")" else ""
+                node.fieldsAsMap().accumulate("${start}mapOf(\n%>", "%<\n)$end", ",\n") {
+                    (name, item) ->
+                    this + name
+                    "%S to " + value(item, expectedTypeInfo.parameterB?.className?.decapitalize(), expectedTypeInfo = expectedTypeInfo.parameterB!!, explicit = explicit)
                 }
             } else if(expectedTypeInfo.className != null){
                 createFunctionFrom(node, propertyName!!, expectedTypeInfo)
@@ -264,11 +389,14 @@ object Inverter{
             properties.similar(name)?.let { node -> value(node, name, propertyType) }  ?: ""
 
         private fun CodeBuilder.createFunctionFrom(node: JsonNode, name: String, propertyType: ResourceTypeInfo): String {
-            val typeInfo = resourceInfo.similar(propertyType.rawType)!!
-            staticImports.add(typeInfo.canonicalPackage to name)
-            val requiredList = requiredList(typeInfo.required, node)
-            val notRequiredList = notRequiredList(typeInfo.notRequired, node).let { if(it.isEmpty()) "\n" else "{%>$it%<}\n" }
-            return "$name($requiredList)$notRequiredList"
+            if(!propertyType.rawType.contains("AWS::Tag::Tag")) {
+                val typeInfo = resourceInfo.similar(propertyType.rawType)!!
+                staticImports.add(typeInfo.canonicalPackage to name)
+                val requiredList = requiredList(typeInfo.required, node)
+                val notRequiredList = notRequiredList(typeInfo.notRequired, node).let { if (it.isEmpty()) "\n" else "{\n%>$it\n%<}\n" }
+                return "$name($requiredList)$notRequiredList"
+            }
+            return ""
         }
 
         private fun CodeBuilder.codeForParameters() = codeFrom(
