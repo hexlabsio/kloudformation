@@ -143,6 +143,7 @@ object Inverter{
             }
 
         private fun CodeBuilder.valueString(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.String")))
+        private fun CodeBuilder.valueBoolean(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.Boolean")))
 
         private fun CodeBuilder.attFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
             val (resource, attribute) = node.elementsAsList()
@@ -260,6 +261,25 @@ object Inverter{
             return "%T(${valueString(index)}, ${value(items,expectedTypeInfo = newExpectedType)})"
         }
 
+        private fun CodeBuilder.andOrFrom(node: JsonNode, and: Boolean): String {
+            val (a, b) = node.elementsAsList()
+            val name = if(and) "and" else "or"
+            staticImports += "$kPackage.function" to name
+            return "(${valueBoolean(a)} $name ${valueBoolean(b)})"
+        }
+
+        private fun CodeBuilder.equalsFrom(node: JsonNode): String {
+            val (a, b) = node.elementsAsList()
+            staticImports += "$kPackage.function" to "eq"
+            return "(${valueString(a)} eq ${valueString(b)})" //TODO Check that value string is ok here, can by anything
+        }
+
+        private fun CodeBuilder.notFrom(node: JsonNode): String {
+            val (value) = node.elementsAsList()
+            staticImports += "$kPackage.function" to "not"
+            return "not(${valueBoolean(value)})"
+        }
+
         private fun CodeBuilder.rawTypeFrom(node: JsonNode, propertyName: String? = null, expectedType: ResourceTypeInfo, explicit: Boolean = false) =
             if(node.isObject){
                 val (name, properties) = node.fields().next()
@@ -267,6 +287,10 @@ object Inverter{
                     "Fn::Join" -> joinFrom(properties)
                     "Fn::Select" -> selectFrom(properties, expectedType)
                     "Fn::If" -> ifFrom(properties, expectedType)
+                    "Fn::And" -> andOrFrom(properties, true)
+                    "Fn::Equals" -> equalsFrom(properties)
+                    "Fn::Not" -> notFrom(properties)
+                    "Fn::Or" -> andOrFrom(properties, false)
                     "Fn::FindInMap" -> findInMapFrom(properties)
                     "Fn::Base64" -> base64From(properties)
                     "Fn::GetAtt" -> attFrom(properties, expectedType)
