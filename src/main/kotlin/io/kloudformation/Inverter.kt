@@ -87,7 +87,7 @@ object Inverter{
         conversion(item).let { text -> "$acc${ if((index>0 || firstIncluded) && text.isNotEmpty()) separator else "" }$text" }
     } + end
 
-    private class StackInverter(
+    class StackInverter(
             private val staticImports: MutableList<Pair<String, String>> = mutableListOf(),
             private val parameters: MutableMap<String, JsonNode> = mutableMapOf(),
             private val mappings: MutableMap<String, JsonNode> = mutableMapOf(),
@@ -399,7 +399,7 @@ object Inverter{
             return ""
         }
 
-        private fun CodeBuilder.codeForParameters() = codeFrom(
+        fun CodeBuilder.codeForParameters() = codeFrom(
                 parameters.accumulate(separator = "\n") { (name, parameter) ->
                     val type = parameter.parameterType()
                     val typeString = if (type.first != "String") ", type = \"${type.first}\"" else ""
@@ -409,7 +409,7 @@ object Inverter{
                 } + if(parameters.isNotEmpty()) "\n" else ""
         )
 
-        private fun CodeBuilder.codeForMappings(): CodeBlock = codeFrom(
+        fun CodeBuilder.codeForMappings(): CodeBlock = codeFrom(
                 if(mappings.isNotEmpty()){
                     mappings.accumulate("mappings(\n%>", "\n%<)\n", separator = ",\n"){
                         (name, node) ->
@@ -428,7 +428,7 @@ object Inverter{
                 else ""
         )
 
-        private fun codeForResources(): CodeBlock = reorder(
+        fun codeForResources(): CodeBlock = reorder(
                 resources.map{ (name, resource) ->
                 val (_, typeInfo) = resource.resourceTypeInfo(name)
                 val functionName = typeInfo.name.decapitalize()
@@ -464,20 +464,20 @@ object Inverter{
 
         private fun classForTemplate(node: JsonNode) = TypeSpec.objectBuilder(className).addFunction(functionForTemplate(node)).build()
 
-        private data class RefBuilder(
+        data class RefBuilder(
                 val name: String = "",
                 val code: String = "",
                 val refs: MutableList<String> = mutableListOf()
         )
 
-        private inner class CodeBuilder(val objectList: MutableList<Any> = mutableListOf(), var refBuilder: RefBuilder = RefBuilder()){
+        inner class CodeBuilder(val objectList: MutableList<Any> = mutableListOf(), var refBuilder: RefBuilder = RefBuilder()){
             operator fun plus(item: Any) = objectList.add(item)
             fun codeFrom(code: String): CodeBlock{
                 return CodeBlock.of(code, *objectList.toTypedArray())
             }
         }
 
-        fun reorder(codeBuilders: List<CodeBuilder>): CodeBlock{
+        private fun reorder(codeBuilders: List<CodeBuilder>): CodeBlock{
             val codeBlocks = codeBuilders.toMutableList()
             val refCounts = codeBlocks.map { item -> item.refBuilder.name to codeBlocks.count { it.refBuilder.refs.contains(item.refBuilder.name) } }.toMap()
             codeBlocks.sortWith(Comparator { a, b ->
