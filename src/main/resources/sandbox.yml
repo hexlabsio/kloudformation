@@ -162,6 +162,13 @@
       "Type" : "AWS::CloudFormation::WaitConditionHandle"
     },
 
+    "RouteTable": {
+      "Type": "AWS::EC2::RouteTable",
+      "Properties": {
+        "Tags":[{"Key": "key", "Value":"value"}]
+      }
+    },
+
     "WindowsServerWaitCondition" : {
       "Type" : "AWS::CloudFormation::WaitCondition",
       "DependsOn" : "WindowsServer",

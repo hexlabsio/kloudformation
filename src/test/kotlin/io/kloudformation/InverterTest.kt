@@ -3,6 +3,9 @@ package io.kloudformation
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.resource.ec2.RouteTable
+import io.kloudformation.resource.ec2.routeTable
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import kotlin.test.expect

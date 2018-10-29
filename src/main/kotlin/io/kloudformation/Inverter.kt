@@ -44,8 +44,8 @@ object Inverter{
         val isValue = startsWith("$kPackage.Value")
         val isList = startsWith("List") || startsWith("kotlin.collections.List")
         val isMap = startsWith("kotlin.collections.Map")
-        val canonicalPackage = if(startsWith("AWS::")) canonicalPackageFor(this, false) else null
-        val className = if(startsWith("AWS::")) substringAfterLast(".") else null
+        val canonicalPackage = if(startsWith("AWS::") || equals("Tag")) canonicalPackageFor(this, false) else null
+        val className = if(startsWith("AWS::")) substringAfterLast(".") else if(equals("Tag")) this else null
         val parameterA = when {
             isList || isValue -> substringAfter("<").substringBeforeLast(">")
             isMap ->  substringAfter("<").substringBefore(",")
@@ -67,6 +67,7 @@ object Inverter{
     }
 
     private fun canonicalPackageFor(awsType: String, resource: Boolean): String{
+        if(awsType == "Tag") return "$kPackage.property"
         val resourcePackage = awsType.substringAfter("::").substringBefore("::").toLowerCase()
         val otherPackages = awsType.substringAfter("::").substringAfter("::").split(".")
         val otherPackagesString = otherPackages.subList(0, otherPackages.size-1).accumulate(separator = ".") { it.toLowerCase() }
@@ -389,14 +390,11 @@ object Inverter{
             properties.similar(name)?.let { node -> value(node, name, propertyType) }  ?: ""
 
         private fun CodeBuilder.createFunctionFrom(node: JsonNode, name: String, propertyType: ResourceTypeInfo): String {
-            if(!propertyType.rawType.contains("AWS::Tag::Tag")) {
-                val typeInfo = resourceInfo.similar(propertyType.rawType)!!
-                staticImports.add(typeInfo.canonicalPackage to name)
-                val requiredList = requiredList(typeInfo.required, node)
-                val notRequiredList = notRequiredList(typeInfo.notRequired, node).let { if (it.isEmpty()) "\n" else "{\n%>$it\n%<}\n" }
-                return "$name($requiredList)$notRequiredList"
-            }
-            return ""
+            val typeInfo = resourceInfo.similar(propertyType.rawType) ?: throw InverterException("Could not find information for type ${propertyType.rawType}")
+            staticImports.add(typeInfo.canonicalPackage to name)
+            val requiredList = requiredList(typeInfo.required, node)
+            val notRequiredList = notRequiredList(typeInfo.notRequired, node).let { if (it.isEmpty()) "\n" else "{\n%>$it\n%<}\n" }
+            return "$name($requiredList)$notRequiredList"
         }
 
         fun CodeBuilder.codeForParameters() = codeFrom(
