@@ -214,11 +214,36 @@ object Inverter{
             return "%T(${valueString(node)})"
         }
 
+        private fun CodeBuilder.importValueFrom(node: JsonNode): String {
+            this + ImportValue::class
+            return "%T(${valueString(node)})"
+        }
+
         private fun CodeBuilder.findInMapFrom(node: JsonNode): String {
             val (map, top, second) = node.elementsAsList()
             this + FindInMap::class
             return "%T(${valueString(map)}, ${valueString(top)}, ${valueString(second)})"
         }
+
+        private fun CodeBuilder.splitFrom(node: JsonNode): String {
+            val (delimiter, sourceString) = node.elementsAsList()
+            this + Split::class
+            this + delimiter
+            return "%T(%S, ${valueString(sourceString)})"
+        }
+
+        private fun CodeBuilder.subFrom(node: JsonNode, expectedType: ResourceTypeInfo): String =
+             if(node.isArray){
+                val (string, variables) = node.elementsAsList()
+                this + Sub::class
+                this + string
+                val newExpectedType = "kotlin.collections.Map<$kPackage.Value<${expectedType.rawType}>>".propertyInfo(expectedType.required)
+                 "%T(%S, ${value(variables, expectedTypeInfo = newExpectedType)})"
+            } else{
+                this + Sub::class
+                this + node.textValue()
+                 "%T(%S)"
+            }
 
         private fun CodeBuilder.ifFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
             val (condition, ifTrue, ifFalse) = node.elementsAsList()
@@ -228,17 +253,28 @@ object Inverter{
             return "%T(%S, ${value(ifTrue,expectedTypeInfo = newExpectedType)}, ${value(ifFalse,expectedTypeInfo = newExpectedType)})"
         }
 
+        private fun CodeBuilder.selectFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
+            val (index, items) = node.elementsAsList()
+            this + Select::class
+            val newExpectedType = "kotlin.collections.List<$kPackage.Value<${expectedType.rawType}>>".propertyInfo(expectedType.required)
+            return "%T(${valueString(index)}, ${value(items,expectedTypeInfo = newExpectedType)})"
+        }
+
         private fun CodeBuilder.rawTypeFrom(node: JsonNode, propertyName: String? = null, expectedType: ResourceTypeInfo, explicit: Boolean = false) =
             if(node.isObject){
                 val (name, properties) = node.fields().next()
                 when (name) {
                     "Fn::Join" -> joinFrom(properties)
+                    "Fn::Select" -> selectFrom(properties, expectedType)
                     "Fn::If" -> ifFrom(properties, expectedType)
                     "Fn::FindInMap" -> findInMapFrom(properties)
                     "Fn::Base64" -> base64From(properties)
                     "Fn::GetAtt" -> attFrom(properties, expectedType)
                     "Ref" -> refFrom(properties.textValue(), expectedType, explicit)
                     "Fn::GetAZs" -> getAzsFrom(properties)
+                    "Fn::ImportValue" -> importValueFrom(properties)
+                    "Fn::Split" -> splitFrom(properties)
+                    "Fn::Sub" -> subFrom(properties, expectedType)
                     else -> "+\"UNKNOWN\""
                 }
             } else {
