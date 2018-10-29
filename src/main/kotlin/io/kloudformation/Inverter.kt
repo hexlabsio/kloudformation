@@ -108,7 +108,7 @@ object Inverter{
                 "List<String>" -> ParameterizedTypeName.get(List::class, String::class)
                 "CommaDelimitedList" -> ParameterizedTypeName.get(List::class, String::class)
                 //TODO deal with others
-                else -> String::class.asClassName()
+                else -> String::class
             }
         }
 
@@ -185,7 +185,8 @@ object Inverter{
                 if(expectedType.rawType == "kotlin.String")  "${refItem.decapitalize()}.ref()"
                 else {
                     this + Reference::class
-                    "%T${if(explicit) "<${expectedType.rawType}>" else ""}(${refItem.decapitalize()}.logicalName)"
+                    val expectedRawType = if(expectedType.rawType == "kotlin.String") "String" else expectedType.rawType
+                    "%T${if(explicit) "<$expectedRawType>" else ""}(${refItem.decapitalize()}.logicalName)"
                 }
             }
             else {
