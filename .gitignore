@@ -1,3 +1,5 @@
 target
 *.iml
 .idea
+src/main/resources/info.json
+src/main/resources/sandbox.yml
