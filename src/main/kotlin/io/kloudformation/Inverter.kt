@@ -91,6 +91,7 @@ object Inverter{
     class StackInverter(
             private val staticImports: MutableList<Pair<String, String>> = mutableListOf(),
             private val parameters: MutableMap<String, JsonNode> = mutableMapOf(),
+            private val conditions: MutableMap<String, JsonNode> = mutableMapOf(),
             private val mappings: MutableMap<String, JsonNode> = mutableMapOf(),
             private val resources: MutableMap<String, JsonNode> = mutableMapOf()
     ): StdDeserializer<FileSpec>(FileSpec::class.java) {
@@ -467,6 +468,13 @@ object Inverter{
                 } + if(parameters.isNotEmpty()) "\n" else ""
         )
 
+        fun CodeBuilder.codeForConditions() = codeFrom(
+                conditions.accumulate("\n") { (name, condition) ->
+                    this + name
+                    "val ${name.decapitalize()} = condition(%S, ${valueBoolean(condition)})"
+                } + if(conditions.isNotEmpty()) "\n" else ""
+        )
+
         fun CodeBuilder.codeForMappings(): CodeBlock = codeFrom(
                 if(mappings.isNotEmpty()){
                     mappings.accumulate("mappings(\n%>", "\n%<)\n", separator = ",\n"){
@@ -493,7 +501,11 @@ object Inverter{
                 staticImports.add(typeInfo.canonicalPackage to functionName)
                 val codeBuilder = CodeBuilder(refBuilder = RefBuilder(name = name))
                 codeBuilder + name
-                val required = typeInfo.required.accumulate("$functionName(logicalName = %S", ")", firstIncluded = true) {
+                val fields = listOfNotNull(
+                        "logicalName" to "%S",
+                        resource["Condition"]?.let { "condition" to it.textValue().decapitalize() }
+                ).accumulate { (key, value) -> "$key = $value"}
+                val required = typeInfo.required.accumulate("$functionName($fields", ")", firstIncluded = true) {
                     (propertyName, propertyType) ->
                     "$propertyName = " + codeBuilder.createFunctionFrom(resource.properties(), propertyName, propertyType)
                 }
@@ -508,12 +520,14 @@ object Inverter{
 
         private fun functionForTemplate(node: JsonNode): FunSpec {
             parameters.putAll(node.mapFromFieldNamed("Parameters"))
+            conditions.putAll(node.mapFromFieldNamed("Conditions"))
             mappings.putAll(node.mapFromFieldNamed("Mappings"))
             resources.putAll(node.mapFromFieldNamed("Resources"))
             return FunSpec.builder(functionName)
                     .returns(KloudFormationTemplate::class)
                     .addCode("return %T.create {\n%>%>", KloudFormationTemplate::class)
                     .addCode(CodeBuilder().codeForParameters())
+                    .addCode(CodeBuilder().codeForConditions())
                     .addCode(CodeBuilder().codeForMappings())
                     .addCode(codeForResources())
                     .addCode("\n%<}\n%<")
