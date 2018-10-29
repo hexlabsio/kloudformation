@@ -40,6 +40,8 @@ object Inverter{
     private const val functionName = "stack"
     private val resourceInfo = resourceInfo()
 
+    private fun String.variableName() = replace(Regex("[^a-zA-Z0-9]"),"").decapitalize()
+
     private fun String.propertyInfo(required: Boolean): ResourceTypeInfo{
         val isValue = startsWith("$kPackage.Value")
         val isList = startsWith("List") || startsWith("kotlin.collections.List")
@@ -85,7 +87,7 @@ object Inverter{
             firstIncluded: Boolean = false,
             conversion: (S) -> String = { "$it" }
     ): String = foldIndexed(start){ index, acc, item ->
-        conversion(item).let { text -> "$acc${ if((index>0 || firstIncluded) && text.isNotEmpty()) separator else "" }$text" }
+        conversion(item).let { text -> "$acc${ if((index>0 || firstIncluded) && text.isNotEmpty() && acc.isNotEmpty()) separator else "" }$text" }
     } + end
 
     class StackInverter(
@@ -152,7 +154,7 @@ object Inverter{
             this + Att::class
             val attResource = if((parameters.keys + resources.keys).contains(resourceText)){
                 refBuilder.refs += resourceText
-                resourceText.decapitalize() + ".logicalName"
+                resourceText.variableName() + ".logicalName"
             }
             else {
                 this + resourceText
@@ -182,11 +184,11 @@ object Inverter{
         private fun CodeBuilder.refFrom(refItem: String, expectedType: ResourceTypeInfo, explicit: Boolean = false) =
             if((parameters.keys + resources.keys).contains(refItem)) {
                 refBuilder.refs += refItem
-                if(expectedType.rawType == "kotlin.String")  "${refItem.decapitalize()}.ref()"
+                if(expectedType.rawType == "kotlin.String")  "${refItem.variableName()}.ref()"
                 else {
                     this + Reference::class
                     val expectedRawType = if(expectedType.rawType == "kotlin.String") "String" else expectedType.rawType
-                    "%T${if(explicit) "<$expectedRawType>" else ""}(${refItem.decapitalize()}.logicalName)"
+                    "%T${if(explicit) "<$expectedRawType>" else ""}(${refItem.variableName()}.logicalName)"
                 }
             }
             else {
@@ -282,6 +284,16 @@ object Inverter{
             return "not(${valueBoolean(value)})"
         }
 
+        private fun CodeBuilder.conditionFrom(node: JsonNode): String {
+            val conditionName = node.textValue()
+            return if(conditions.containsKey(conditionName)) conditionName.variableName()
+            else{
+                this + Condition::class
+                this + conditionName
+                "%T(%S)"
+            }
+        }
+
         private fun CodeBuilder.rawTypeFrom(node: JsonNode, propertyName: String? = null, expectedType: ResourceTypeInfo, explicit: Boolean = false) =
             if(node.isObject){
                 val (name, properties) = node.fields().next()
@@ -301,6 +313,7 @@ object Inverter{
                     "Fn::ImportValue" -> importValueFrom(properties)
                     "Fn::Split" -> splitFrom(properties)
                     "Fn::Sub" -> subFrom(properties, expectedType)
+                    "Condition" -> conditionFrom(properties)
                     else -> "+\"UNKNOWN\""
                 }
             } else {
@@ -465,14 +478,14 @@ object Inverter{
                     val typeString = if (type.first != "String") ", type = \"${type.first}\"" else ""
                     this + type.second
                     this + name
-                    "val ${name.decapitalize()} = parameter<%T>(logicalName = %S$typeString)"
+                    "val ${name.variableName()} = parameter<%T>(logicalName = %S$typeString)"
                 } + if(parameters.isNotEmpty()) "\n" else ""
         )
 
         fun CodeBuilder.codeForConditions() = codeFrom(
-                conditions.accumulate("\n") { (name, condition) ->
+                conditions.accumulate(separator = "\n") { (name, condition) ->
                     this + name
-                    "val ${name.decapitalize()} = condition(%S, ${valueBoolean(condition)})"
+                    "val ${name.variableName()} = condition(%S, ${valueBoolean(condition)})"
                 } + if(conditions.isNotEmpty()) "\n" else ""
         )
 
@@ -495,6 +508,14 @@ object Inverter{
                 else ""
         )
 
+        fun CodeBuilder.conditionReferenceFor(condition: String): String{
+            return if(conditions.containsKey(condition)) condition.variableName() + ".logicalName"
+            else {
+                this + condition
+                "%S"
+            }
+        }
+
         fun codeForResources(): CodeBlock = reorder(
                 resources.map{ (name, resource) ->
                 val (_, typeInfo) = resource.resourceTypeInfo(name)
@@ -504,7 +525,7 @@ object Inverter{
                 codeBuilder + name
                 val fields = listOfNotNull(
                         "logicalName" to "%S",
-                        resource["Condition"]?.let { "condition" to it.textValue().decapitalize() }
+                        resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(it.textValue()) }
                 ).accumulate { (key, value) -> "$key = $value"}
                 val required = typeInfo.required.accumulate("$functionName($fields", ")", firstIncluded = true) {
                     (propertyName, propertyType) ->
@@ -562,7 +583,7 @@ object Inverter{
             return CodeBlock.builder().also { builder ->
                 codeBlocks.forEach{ codeBlock ->
                     val code = if(refCounts[codeBlock.refBuilder.name] == 0) codeBlock.refBuilder.code
-                    else "val ${codeBlock.refBuilder.name.decapitalize()} = ${codeBlock.refBuilder.code}"
+                    else "val ${codeBlock.refBuilder.name.variableName()} = ${codeBlock.refBuilder.code}"
                     builder.add(code + "\n", *codeBlock.objectList.toTypedArray()) }
             }.build()
         }
