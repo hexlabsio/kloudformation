@@ -253,9 +253,9 @@ object Inverter{
         private fun CodeBuilder.ifFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
             val (condition, ifTrue, ifFalse) = node.elementsAsList()
             this + If::class
-            this + condition.textValue()
+            val conditionReference = conditionReferenceFor(condition.textValue())
             val newExpectedType = "$kPackage.Value<${expectedType.rawType}>".propertyInfo(expectedType.required)
-            return "%T(%S, ${value(ifTrue,expectedTypeInfo = newExpectedType)}, ${value(ifFalse,expectedTypeInfo = newExpectedType)})"
+            return "%T($conditionReference, ${value(ifTrue,expectedTypeInfo = newExpectedType)}, ${value(ifFalse,expectedTypeInfo = newExpectedType)})"
         }
 
         private fun CodeBuilder.selectFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
