@@ -12,6 +12,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.squareup.kotlinpoet.*
 import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.model.iam.ConditionOperator
 import io.kloudformation.specification.SpecificationPoet
 import java.io.File
 import java.lang.IllegalArgumentException
@@ -391,6 +392,19 @@ object Inverter{
             }
         }
 
+        private fun CodeBuilder.iamConditionFrom(node: JsonNode): String{
+            return node.fieldsAsMap().accumulate(separator = "\n"){ (name, fieldNode) ->
+                this + name
+                val conditions = fieldNode.fieldsAsMap()
+                val conditionString = conditions.accumulate { (key, conditionListNode) ->
+                    val conditionList = (if(conditionListNode.isArray) conditionListNode.elementsAsList() else listOf(conditionListNode))
+                            .accumulate { this + it.textValue(); "%S" }
+                    "\"$key\" to listOf($conditionList)"
+                }
+                "condition(%S, mapOf($conditionString))"
+            }
+        }
+
         private fun CodeBuilder.statementFrom(node: JsonNode): String{
             val parameters = listOfNotNull(
                     node["Sid"]?.textValue()?.let { "sid = \"$it\"" },
@@ -402,8 +416,8 @@ object Inverter{
             ).accumulate()
             val body = listOfNotNull(
                     node["Principal"]?.let { principalFrom(it, true) },
-                    node["NotPrincipal"]?.let { principalFrom(it, false) }
-                    //TODO Conditions
+                    node["NotPrincipal"]?.let { principalFrom(it, false) },
+                    node["Condition"]?.let { iamConditionFrom(it) }
             ).accumulate(separator = "\n")
             return "statement($parameters){\n%>$body%<\n}\n"
         }
@@ -546,7 +560,7 @@ object Inverter{
         }
 
         private fun CodeBuilder.autoScalingRollingUpdateFrom(node: JsonNode): String{
-            this + UpdatePolicy::class
+            this + AutoScalingRollingUpdate::class
             val fields = listOfNotNull(
                     node["MaxBatchSize"]?.let { "maxBatchSize = " + valueInt(it) },
                     node["MinInstancesInService"]?.let { "minInstancesInService = " + valueInt(it) },
@@ -558,7 +572,7 @@ object Inverter{
             return "%T($fields)"
         }
         private fun CodeBuilder.autoScalingReplacingUpdateFrom(node: JsonNode): String{
-            this + UpdatePolicy::class
+            this + AutoScalingReplacingUpdate::class
             val fields = listOfNotNull(
                     node["WillReplace"]?.let { "willReplace = " + valueBoolean(it) }
             ).accumulate()
@@ -566,7 +580,7 @@ object Inverter{
         }
 
         private fun CodeBuilder.autoScalingScheduledActionFrom(node: JsonNode): String{
-            this + UpdatePolicy::class
+            this + AutoScalingScheduledAction::class
             val fields = listOfNotNull(
                     node["IgnoreUnmodifiedGroupSizeProperties"]?.let { "ignoreUnmodifiedGroupSizeProperties = " + valueBoolean(it) }
             ).accumulate()
@@ -574,7 +588,7 @@ object Inverter{
         }
 
         private fun CodeBuilder.codeDeployLambdaAliasUpdateFrom(node: JsonNode): String{
-            this + UpdatePolicy::class
+            this + CodeDeployLambdaAliasUpdate::class
             val fields = listOfNotNull(
                     node["AfterAllowTrafficHook"]?.let { "afterAllowTrafficHook = " + valueString(it) },
                     node["ApplicationName"]?.let { "applicationName = " + valueString(it) },
@@ -606,12 +620,8 @@ object Inverter{
         }
 
         private fun CodeBuilder.deletionPolicyFor(node: JsonNode): String{
-            when(node.textValue()){
-                "Delete" -> this + DeletionPolicy.DELETE::class
-                "Snapshot" -> this + DeletionPolicy.SNAPSHOT::class
-                else -> this + DeletionPolicy.RETAIN::class
-            }
-            return "%T"
+            staticImports += kPackage to "DeletionPolicy"
+            return "DeletionPolicy." + node.textValue().toUpperCase() + ".policy"
         }
 
         fun CodeBuilder.jsonPartFor(node: JsonNode): String{
