@@ -146,6 +146,7 @@ object Inverter{
             }
 
         private fun CodeBuilder.valueString(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.String")))
+        private fun CodeBuilder.valueListString(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.collections.List", list = true, parameterA = ResourceTypeInfo("kotlin.String"))))
         private fun CodeBuilder.valueBoolean(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.Boolean")))
         private fun CodeBuilder.valueInt(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.Int")))
 
@@ -544,6 +545,45 @@ object Inverter{
             return "%T($fields)"
         }
 
+        private fun CodeBuilder.autoScalingRollingUpdateFrom(node: JsonNode): String{
+            this + UpdatePolicy::class
+            val fields = listOfNotNull(
+                    node["MaxBatchSize"]?.let { "maxBatchSize = " + valueInt(it) },
+                    node["MinInstancesInService"]?.let { "minInstancesInService = " + valueInt(it) },
+                    node["MinSuccessfulInstancesPercent"]?.let { "minSuccessfulInstancesPercent = " + valueInt(it) },
+                    node["PauseTime"]?.let { "pauseTime = " + valueString(it) },
+                    node["SuspendProcesses"]?.let { "suspendProcesses = " + valueListString(it) },
+                    node["WaitOnResourceSignals"]?.let { "waitOnResourceSignals = " + valueBoolean(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+        private fun CodeBuilder.autoScalingReplacingUpdateFrom(node: JsonNode): String{
+            this + UpdatePolicy::class
+            val fields = listOfNotNull(
+                    node["WillReplace"]?.let { "willReplace = " + valueBoolean(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+
+        private fun CodeBuilder.autoScalingScheduledActionFrom(node: JsonNode): String{
+            this + UpdatePolicy::class
+            val fields = listOfNotNull(
+                    node["IgnoreUnmodifiedGroupSizeProperties"]?.let { "ignoreUnmodifiedGroupSizeProperties = " + valueBoolean(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+
+        private fun CodeBuilder.codeDeployLambdaAliasUpdateFrom(node: JsonNode): String{
+            this + UpdatePolicy::class
+            val fields = listOfNotNull(
+                    node["AfterAllowTrafficHook"]?.let { "afterAllowTrafficHook = " + valueString(it) },
+                    node["ApplicationName"]?.let { "applicationName = " + valueString(it) },
+                    node["BeforeAllowTrafficHook"]?.let { "beforeAllowTrafficHook = " + valueString(it) },
+                    node["DeploymentGroupName"]?.let { "deploymentGroupName = " + valueString(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+
         private fun CodeBuilder.creationPolicyFor(node: JsonNode): String{
             this + CreationPolicy::class
             val fields = listOfNotNull(
@@ -551,6 +591,27 @@ object Inverter{
                     node["ResourceSignal"]?.let { "resourceSignal = " + resourceSignalFrom(it) }
             ).accumulate()
             return "%T($fields)"
+        }
+
+        private fun CodeBuilder.updatePolicyFor(node: JsonNode): String{
+            this + UpdatePolicy::class
+            val fields = listOfNotNull(
+                    node["AutoScalingRollingUpdate"]?.let { "autoScalingRollingUpdate = " + autoScalingRollingUpdateFrom(it) },
+                    node["AutoScalingReplacingUpdate"]?.let { "autoScalingReplacingUpdate = " + autoScalingReplacingUpdateFrom(it) },
+                    node["AutoScalingScheduledAction"]?.let { "autoScalingScheduledAction = " + autoScalingScheduledActionFrom(it) },
+                    node["CodeDeployLambdaAliasUpdate"]?.let { "codeDeployLambdaAliasUpdate = " + codeDeployLambdaAliasUpdateFrom(it) },
+                    node["UseOnlineResharding"]?.let { "useOnlineResharding = " + valueBoolean(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+
+        private fun CodeBuilder.deletionPolicyFor(node: JsonNode): String{
+            when(node.textValue()){
+                "Delete" -> this + DeletionPolicy.DELETE::class
+                "Snapshot" -> this + DeletionPolicy.SNAPSHOT::class
+                else -> this + DeletionPolicy.RETAIN::class
+            }
+            return "%T"
         }
 
         fun CodeBuilder.jsonPartFor(node: JsonNode): String{
@@ -591,7 +652,9 @@ object Inverter{
                         resource["DependsOn"]?.let { "dependsOn" to codeBuilder.dependsOnFor(it) },
                         resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(it.textValue()) },
                         resource["Metadata"]?.let { "metadata" to codeBuilder.jsonFor(it) },
-                        resource["CreationPolicy"]?.let { "creationPolicy" to codeBuilder.creationPolicyFor(it)}
+                        resource["CreationPolicy"]?.let { "creationPolicy" to codeBuilder.creationPolicyFor(it)},
+                        resource["UpdatePolicy"]?.let { "updatePolicy" to codeBuilder.updatePolicyFor(it)},
+                        resource["DeletionPolicy"]?.let { "deletionPolicy" to codeBuilder.deletionPolicyFor(it)}
                 ).accumulate { (key, value) -> "$key = $value"}
                 val required = typeInfo.required.accumulate("$functionName($fields", ")", firstIncluded = true) {
                     (propertyName, propertyType) ->
