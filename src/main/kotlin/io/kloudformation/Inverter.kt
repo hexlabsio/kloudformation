@@ -12,6 +12,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import com.squareup.kotlinpoet.*
 import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.model.Output
 import io.kloudformation.model.iam.ConditionOperator
 import io.kloudformation.specification.SpecificationPoet
 import java.io.File
@@ -175,7 +176,8 @@ object Inverter{
                 joinItems.map { valueString(it, true) }.accumulate(separator = separator) { it }
             } else {
                 this + Join::class
-                "%T(${splitter.asText()}, ${ items.elementsAsList().map { valueString(it) }.accumulate("listOf(\n%>", "\n%<)", separator = ", \n") { it }})"
+                this + splitter.asText()
+                "%T(%S, ${ items.elementsAsList().map { valueString(it) }.accumulate("listOf(\n%>", "\n%<)", separator = ", \n") { it }})"
             }
         }
 
@@ -683,6 +685,24 @@ object Inverter{
             codeFrom("metadata(${jsonFor(it)})\n")
         } ?: CodeBlock.of("")
 
+        private fun CodeBuilder.codeForOutputs(node: JsonNode) = codeFrom(node["Outputs"]?.let {
+            it.fieldsAsMap().accumulate("outputs(\n%>", "\n%<)\n"){
+                (name, fieldNode) ->
+                this + name
+                this + Output::class
+                val fields = listOfNotNull(
+                        fieldNode["Value"]?.let { "value = " + valueString(it) },
+                        fieldNode["Description"]?.let { "description = \"${it.textValue()}\"" },
+                        fieldNode["Condition"]?.let { "condition = " + conditionReferenceFor(it.textValue())},
+                        fieldNode["Export"]?.let { it["Name"]?.let { exportName ->
+                            this + Output.Export::class
+                            "export = %T(" + valueString(exportName) + ")"
+                        } }
+                ).accumulate()
+                "%S to %T($fields)"
+            }
+        } ?: "")
+
         private fun functionForTemplate(node: JsonNode): FunSpec {
             parameters.putAll(node.mapFromFieldNamed("Parameters"))
             conditions.putAll(node.mapFromFieldNamed("Conditions"))
@@ -696,7 +716,8 @@ object Inverter{
                     .addCode(CodeBuilder().codeForConditions())
                     .addCode(CodeBuilder().codeForMappings())
                     .addCode(codeForResources())
-                    .addCode("\n%<}\n%<")
+                    .addCode(CodeBuilder().codeForOutputs(node))
+                    .addCode("%<}\n%<")
                     .build()
         }
 
