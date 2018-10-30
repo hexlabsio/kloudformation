@@ -147,6 +147,7 @@ object Inverter{
 
         private fun CodeBuilder.valueString(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.String")))
         private fun CodeBuilder.valueBoolean(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.Boolean")))
+        private fun CodeBuilder.valueInt(item: JsonNode, explicit: Boolean = false) = value(item, explicit = explicit, expectedTypeInfo = ResourceTypeInfo(valueType = true, parameterA = ResourceTypeInfo("kotlin.Int")))
 
         private fun CodeBuilder.attFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
             val (resource, attribute) = node.elementsAsList()
@@ -526,6 +527,32 @@ object Inverter{
                 else "\"$dependsOn\""
             }
 
+        private fun CodeBuilder.resourceSignalFrom(node: JsonNode): String{
+            this + CreationPolicy.ResourceSignal::class
+            val fields = listOfNotNull(
+                    node["Count"]?.let { "count = " + valueInt(it) },
+                    node["Timeout"]?.let { "timeout = " + valueString(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+
+        private fun CodeBuilder.autoScalingCreationPolicyFrom(node: JsonNode): String{
+            this + CreationPolicy.AutoScalingCreationPolicy::class
+            val fields = listOfNotNull(
+                    node["MinSuccessfulInstancesPercent"]?.let { "minSuccessfulInstancesPercent = " + valueInt(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+
+        private fun CodeBuilder.creationPolicyFor(node: JsonNode): String{
+            this + CreationPolicy::class
+            val fields = listOfNotNull(
+                    node["AutoScalingCreationPolicy"]?.let { "autoScalingCreationPolicy = " + autoScalingCreationPolicyFrom(it) },
+                    node["ResourceSignal"]?.let { "resourceSignal = " + resourceSignalFrom(it) }
+            ).accumulate()
+            return "%T($fields)"
+        }
+
         fun codeForResources(): CodeBlock = reorder(
                 resources.map{ (name, resource) ->
                 val (_, typeInfo) = resource.resourceTypeInfo(name)
@@ -536,7 +563,8 @@ object Inverter{
                 val fields = listOfNotNull(
                         "logicalName" to "%S",
                         resource["DependsOn"]?.let { "dependsOn" to codeBuilder.dependsOnFor(it) },
-                        resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(it.textValue()) }
+                        resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(it.textValue()) },
+                        resource["CreationPolicy"]?.let { "creationPolicy" to codeBuilder.creationPolicyFor(it)}
                 ).accumulate { (key, value) -> "$key = $value"}
                 val required = typeInfo.required.accumulate("$functionName($fields", ")", firstIncluded = true) {
                     (propertyName, propertyType) ->
