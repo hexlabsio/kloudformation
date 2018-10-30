@@ -553,6 +553,32 @@ object Inverter{
             return "%T($fields)"
         }
 
+        fun CodeBuilder.jsonPartFor(node: JsonNode): String{
+            return when {
+                node.isObject -> {
+                    val fields = node.fieldsAsMap()
+                    fields.accumulate("mapOf(\n%>", "\n%<)"){
+                        (name, fieldNode) ->
+                        this + name
+                        "%S to ${jsonPartFor(fieldNode)}"
+                    }
+                }
+                node.isArray -> {
+                    val elements = node.elementsAsList()
+                    elements.accumulate("listOf(\n%>", "\n%<)"){ jsonPartFor(it) }
+                }
+                else -> {
+                    this + node.textValue()
+                    "%S"
+                }
+            }
+        }
+
+        fun CodeBuilder.jsonFor(node: JsonNode): String{
+            staticImports += kPackage to "json"
+            return "json(\n%>${jsonPartFor(node)}\n%<)"
+        }
+
         fun codeForResources(): CodeBlock = reorder(
                 resources.map{ (name, resource) ->
                 val (_, typeInfo) = resource.resourceTypeInfo(name)
@@ -564,6 +590,7 @@ object Inverter{
                         "logicalName" to "%S",
                         resource["DependsOn"]?.let { "dependsOn" to codeBuilder.dependsOnFor(it) },
                         resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(it.textValue()) },
+                        resource["Metadata"]?.let { "metadata" to codeBuilder.jsonFor(it) },
                         resource["CreationPolicy"]?.let { "creationPolicy" to codeBuilder.creationPolicyFor(it)}
                 ).accumulate { (key, value) -> "$key = $value"}
                 val required = typeInfo.required.accumulate("$functionName($fields", ")", firstIncluded = true) {
