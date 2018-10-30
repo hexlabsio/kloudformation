@@ -508,13 +508,23 @@ object Inverter{
                 else ""
         )
 
-        fun CodeBuilder.conditionReferenceFor(condition: String): String{
+        private fun CodeBuilder.conditionReferenceFor(condition: String): String{
             return if(conditions.containsKey(condition)) condition.variableName() + ".logicalName"
             else {
                 this + condition
                 "%S"
             }
         }
+
+        private fun CodeBuilder.dependsOnFor(node: JsonNode): String =
+            (if(node.isArray) node.elementsAsList() else listOf(node)).accumulate("listOf(", ")") {
+                val dependsOn = it.textValue()
+                if(resources.containsKey(dependsOn)){
+                    refBuilder.refs += dependsOn
+                    dependsOn.variableName() + ".logicalName"
+                }
+                else "\"$dependsOn\""
+            }
 
         fun codeForResources(): CodeBlock = reorder(
                 resources.map{ (name, resource) ->
@@ -525,6 +535,7 @@ object Inverter{
                 codeBuilder + name
                 val fields = listOfNotNull(
                         "logicalName" to "%S",
+                        resource["DependsOn"]?.let { "dependsOn" to codeBuilder.dependsOnFor(it) },
                         resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(it.textValue()) }
                 ).accumulate { (key, value) -> "$key = $value"}
                 val required = typeInfo.required.accumulate("$functionName($fields", ")", firstIncluded = true) {
