@@ -606,6 +606,10 @@ object Inverter{
             }
         )
 
+        private fun CodeBuilder.codeForMetadata(node: JsonNode) = node["Metadata"]?.let {
+            codeFrom("metadata(${jsonFor(it)})\n")
+        } ?: CodeBlock.of("")
+
         private fun functionForTemplate(node: JsonNode): FunSpec {
             parameters.putAll(node.mapFromFieldNamed("Parameters"))
             conditions.putAll(node.mapFromFieldNamed("Conditions"))
@@ -615,6 +619,7 @@ object Inverter{
                     .returns(KloudFormationTemplate::class)
                     .addCode("return %T.create {\n%>%>", KloudFormationTemplate::class)
                     .addCode(CodeBuilder().codeForParameters())
+                    .addCode(CodeBuilder().codeForMetadata(node))
                     .addCode(CodeBuilder().codeForConditions())
                     .addCode(CodeBuilder().codeForMappings())
                     .addCode(codeForResources())
