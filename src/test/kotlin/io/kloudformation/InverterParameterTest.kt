@@ -20,6 +20,26 @@ class InverterParameterTest{
     @Test
     fun `should have type String and correct logical name for empty object parameter`(){
         val parameters = """{ "TestParameter": {}}""".fieldsAsMap()
+        val testClass = InverterParameterTest::class.java.classLoader.getResource("testSources/test.kt").readText().lines()
+        data class Acc(var inFunction: Boolean = false, val lines: MutableList<String> = mutableListOf(), var opens: Int = 0)
+        val lines = testClass.fold(Acc()){
+            acc, line ->
+            if(line.trim() == "}"){
+                acc.opens--
+                if(acc.opens == 0){
+                    acc.inFunction = false
+                }
+            }
+            if(acc.inFunction){
+                acc.lines += line
+            }
+            if(line.trim() == "fun KloudFormationTemplate.Builder.TestOne(){"){
+                acc.opens++
+                acc.inFunction = true
+            }
+                acc
+        }.lines
+        println(lines)
         with(Inverter.StackInverter(parameters = parameters)) {
             expect("""val testParameter = parameter<kotlin.String>(logicalName = "TestParameter")"""){
                 CodeBuilder().codeForParameters().toString().trim()

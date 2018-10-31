@@ -13,7 +13,6 @@ import com.squareup.kotlinpoet.*
 import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.Output
-import io.kloudformation.model.iam.ConditionOperator
 import io.kloudformation.specification.SpecificationPoet
 import java.io.File
 import java.lang.IllegalArgumentException
@@ -32,10 +31,57 @@ object Inverter{
     class InverterException(message: String): Exception(message)
     data class ResourceInfo(val type: String, val canonicalPackage: String, val name: String, val required: Map<String, ResourceTypeInfo>, val notRequired: Map<String, ResourceTypeInfo>)
     data class ResourceTypeInfo(val rawType: String = "", val canonicalPackage: String? = null, val className: String? = null, val required: Boolean = true, val valueType: Boolean = false, val list: Boolean = false, val map: Boolean = false, val parameterA: ResourceTypeInfo? = null, val parameterB: ResourceTypeInfo? = null)
-    fun invert(template: String): FileSpec =
-            ObjectMapper(YAMLFactory())
-            .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter()))
-            .readValue(template)
+    fun invert(template: String): FileSpec{
+        return ObjectMapper(YAMLFactory())
+                .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter()))
+                .readValue(fix(template))
+    }
+
+    fun escape(value: String): String = value.replace("$", "\\$").replace("\n", "\\n")
+
+    fun fix(template: String) = template.lines().map { line ->
+           val cleaned =  clean(line)
+            println(cleaned)
+            cleaned
+        }.accumulate("","", "\n")
+
+    fun clean(line: String): String{
+        return if(line.contains("!Ref")){
+            val reference = line.substringAfter("!Ref").trimStart()
+            val before = line.substringBefore("!Ref")
+
+            before + if(before.trim().endsWith(":")) {
+                val startOfText = before.trimEnd().lastIndexOf(" ")
+                val indent = (0 .. startOfText).toList().accumulate(separator = ""){ " " }
+                "\n$indent  Ref: $reference"
+            } else "Ref: $reference"
+        } else if(line.contains("!GetAtt")){
+            val reference = line.substringAfter("!GetAtt").trimStart()
+            val before = line.substringBefore("!GetAtt")
+            val first = reference.substringBefore(".").trim()
+            val rest = reference.substringAfter(".").trim()
+            before + if(before.trim().endsWith(":")) {
+                val startOfText = before.trimEnd().lastIndexOf(" ")
+                val indent = (0 .. startOfText).toList().accumulate(separator = ""){ " " }
+                "\n$indent  \"Fn::GetAtt\": [ \"$first\", \"$rest\" ]"
+            } else "\"Fn::GetAtt\": [ \"$first\", \"$rest\" ]"
+        } else if(line.contains("!Sub")){
+            val subString = line.substringAfter("!Sub").trim()
+            val before = line.substringBefore("!Sub")
+            if(subString.isEmpty()){
+                ""
+            }
+            else{
+                before + if(before.trim().endsWith(":")) {
+                    val startOfText = before.trimEnd().lastIndexOf(" ")
+                    val indent = (0 .. startOfText).toList().accumulate(separator = ""){ " " }
+                    "\n$indent \"Fn::Sub\": \"$subString\""
+                } else "\"Fn::Sub\": \"$subString\""
+            }
+        }
+        else line
+    }
+
 
     private const val kPackage = "io.kloudformation"
     private const val className = "MyStack"
@@ -138,7 +184,7 @@ object Inverter{
                 }
                 else -> when (expectedType.rawType) {
                     "kotlin.String" -> {
-                        this + value.asText(); "+%S"
+                        "+\"" + escape(value.asText()) + "\""
                     }
                     else -> {
                         this + io.kloudformation.Value.Of::class
@@ -160,10 +206,7 @@ object Inverter{
                 refBuilder.refs += resourceText
                 resourceText.variableName() + ".logicalName"
             }
-            else {
-                this + resourceText
-                "%S"
-            }
+            else "\"${escape(resourceText)}\""
             return "%T<${expectedType.rawType}>($attResource, " + valueString(attribute) + ")"
         }
 
@@ -214,8 +257,7 @@ object Inverter{
                 }
                 else {
                     this + Reference::class
-                    this + refItem
-                    "%T${if (explicit) "<${expectedType.rawType}>" else ""}(%S)"
+                    "%T${if (explicit) "<${expectedType.rawType}>" else ""}(\"${escape(refItem)}\")"
                 }
             }
 
@@ -251,8 +293,7 @@ object Inverter{
                  "%T(%S, ${value(variables, expectedTypeInfo = newExpectedType)})"
             } else{
                 this + Sub::class
-                this + node.textValue()
-                 "%T(%S)"
+                 "%T(\"${escape(node.textValue())}\")"
             }
 
         private fun CodeBuilder.ifFrom(node: JsonNode, expectedType: ResourceTypeInfo): String {
@@ -379,13 +420,8 @@ object Inverter{
         }
         private fun CodeBuilder.principalFrom(node: JsonNode, positive: Boolean): String{
             return if(node.isTextual && node.asText() == "*") {
-                if(positive){
-                    staticImports += "$kPackage.model.iam" to "allPrincipals"
-                    "allPrincipals"
-                } else {
-                    staticImports += "$kPackage.model.iam" to "noPrincipals"
-                    "noPrincipals"
-                }
+                if(positive) "allPrincipals()"
+                else "noPrincipals()"
             }
             else{
                 val (principalType, principalNodes)  = node.fields().next()
@@ -400,7 +436,7 @@ object Inverter{
                 val conditions = fieldNode.fieldsAsMap()
                 val conditionString = conditions.accumulate { (key, conditionListNode) ->
                     val conditionList = (if(conditionListNode.isArray) conditionListNode.elementsAsList() else listOf(conditionListNode))
-                            .accumulate { this + it.textValue(); "%S" }
+                            .accumulate { valueString(it) }
                     "\"$key\" to listOf($conditionList)"
                 }
                 "condition(%S, mapOf($conditionString))"
@@ -421,20 +457,24 @@ object Inverter{
                     node["NotPrincipal"]?.let { principalFrom(it, false) },
                     node["Condition"]?.let { iamConditionFrom(it) }
             ).accumulate(separator = "\n")
-            return "statement($parameters){\n%>$body%<\n}\n"
+            return "statement($parameters)" + if(body.isNotEmpty()) "{\n%>$body%<\n}\n" else "\n"
         }
 
-        private fun CodeBuilder.policyDocFrom(node: JsonNode): String{
-            listOf("IamPolicyEffect", "PrincipalType", "policyDocument").forEach{
-                staticImports.add("$kPackage.model.iam" to it)
+        private fun CodeBuilder.policyDocOrJsonFrom(propertyName: String?, expectedTypeInfo: ResourceTypeInfo, node: JsonNode): String{
+            val value = if(node.fieldsAsMap().keys.contains("Statement")) {
+                listOf("IamPolicyEffect", "PrincipalType", "policyDocument").forEach {
+                    staticImports.add("$kPackage.model.iam" to it)
+                }
+                val parameters = listOfNotNull(
+                        node["Id"]?.textValue()?.let { "id = \"$it\"" },
+                        node["Version"]?.textValue()?.let { "version = \"$it\"" }
+                ).accumulate()
+                val statements = node["Statement"]?.let { if (it.isArray) it.elementsAsList() else listOf(it) }.orEmpty()
+                val body = statements.accumulate(separator = "\n") { statementFrom(it) }
+                 "policyDocument($parameters){\n%>$body%<}\n"
             }
-            val parameters = listOfNotNull(
-                    node["Id"]?.textValue()?.let { "id = \"$it\"" },
-                    node["Version"]?.textValue()?.let { "version = \"$it\"" }
-            ).accumulate()
-            val statements = node["Statement"]?.let {  if(it.isArray) it.elementsAsList() else listOf(it) }.orEmpty()
-            val body = statements.accumulate(separator = "\n"){ statementFrom(it) }
-            return "policyDocument($parameters){\n%>$body%<}\n"
+            else jsonFor(node)
+            return if(propertyName != null && !expectedTypeInfo.required) "$propertyName($value)" else value
         }
 
         private fun isValueJsonNode(expectedType: ResourceTypeInfo) = expectedType.valueType && expectedType.parameterA?.rawType?.contains("JsonNode") == true
@@ -442,7 +482,7 @@ object Inverter{
 
         private fun CodeBuilder.value(node: JsonNode, propertyName: String? = null, expectedTypeInfo: ResourceTypeInfo, explicit: Boolean = false): String {
             return if(expectedTypeInfo.valueType && expectedTypeInfo.parameterA != null) {
-                if(isValueJsonNode(expectedTypeInfo)) policyDocFrom(node)
+                if(isValueJsonNode(expectedTypeInfo)) policyDocOrJsonFrom(propertyName, expectedTypeInfo.parameterA, node)
                 else rawTypeFrom(node, propertyName, expectedTypeInfo.parameterA, explicit)
             }
             else if(expectedTypeInfo.list){
@@ -484,19 +524,37 @@ object Inverter{
 
         private fun CodeBuilder.createFunctionFrom(node: JsonNode, name: String, propertyType: ResourceTypeInfo): String {
             val typeInfo = resourceInfo.similar(propertyType.rawType) ?: throw InverterException("Could not find information for type ${propertyType.rawType}")
-            staticImports.add(typeInfo.canonicalPackage to name)
+            val typeName = if(typeInfo.name == "Policy"){
+                this + ClassName.bestGuess(typeInfo.canonicalPackage + "." + typeInfo.name)
+                "%T"
+            } else {
+                staticImports.add(typeInfo.canonicalPackage to name)
+                name
+            }
             val requiredList = requiredList(typeInfo.required, node)
             val notRequiredList = notRequiredList(typeInfo.notRequired, node).let { if (it.isEmpty()) "\n" else "{\n%>$it\n%<}\n" }
-            return "$name($requiredList)$notRequiredList"
+            return "$typeName($requiredList)$notRequiredList"
         }
 
         fun CodeBuilder.codeForParameters() = codeFrom(
                 parameters.accumulate(separator = "\n") { (name, parameter) ->
-                    val type = parameter.parameterType()
-                    val typeString = if (type.first != "String") ", type = \"${type.first}\"" else ""
-                    this + type.second
-                    this + name
-                    "val ${name.variableName()} = parameter<%T>(logicalName = %S$typeString)"
+                    val (typeName, type) = parameter.parameterType()
+                    val fields = listOfNotNull(
+                            "logicalName = \"$name\"",
+                            if(typeName != "String") "type = \"$typeName\"" else null,
+                            parameter["AllowedPattern"]?.let { "allowedPattern = \"${it.textValue()}\""},
+                            parameter["AllowedValues"]?.let { "allowedValues = listOf(${it.elementsAsList().accumulate()})"},
+                            parameter["ConstraintDescription"]?.let { "constraintDescription = \"${it.textValue()}\""},
+                            parameter["Default"]?.let { "default = \"${it.textValue()}\""},
+                            parameter["Description"]?.let { "description = \"${it.textValue()}\""},
+                            parameter["MaxLength"]?.let { "maxLength = \"${it.textValue()}\""},
+                            parameter["MaxValue"]?.let { "maxValue = \"${it.textValue()}\""},
+                            parameter["MinLength"]?.let { "minLength = \"${it.textValue()}\""},
+                            parameter["MinValue"]?.let { "minValue = \"${it.textValue()}\""},
+                            parameter["NoEcho"]?.let { "noEcho = \"${it.textValue()}\""}
+                            ).accumulate()
+                    this + type
+                    "val ${name.variableName()} = parameter<%T>($fields)"
                 } + if(parameters.isNotEmpty()) "\n" else ""
         )
 
@@ -640,10 +698,8 @@ object Inverter{
                     val elements = node.elementsAsList()
                     elements.accumulate("listOf(\n%>", "\n%<)"){ jsonPartFor(it) }
                 }
-                else -> {
-                    this + node.textValue()
-                    "%S"
-                }
+                node.isTextual -> { this + node.asText(); "%S" }
+                else -> node.asText()
             }
         }
 
@@ -736,17 +792,25 @@ object Inverter{
             }
         }
 
+        private fun dependencyTreeFor(codeBuilders: List<CodeBuilder>): List<CodeBuilder>{
+            val rootNodes = codeBuilders.filter { node -> codeBuilders.find { it.refBuilder.refs.contains(node.refBuilder.name) } == null }
+            val leftOvers = codeBuilders.filter { !rootNodes.contains(it) }.map {
+                CodeBuilder(it.objectList, it.refBuilder.copy(refs = it.refBuilder.refs.filter { name -> rootNodes.find { it.refBuilder.name == name } == null }.toMutableList()))
+            }
+            if(leftOvers.isEmpty()){
+                return rootNodes + leftOvers
+            }
+            return rootNodes + leftOvers + dependencyTreeFor(leftOvers)
+        }
+
         private fun reorder(codeBuilders: List<CodeBuilder>): CodeBlock{
             val codeBlocks = codeBuilders.toMutableList()
             val refCounts = codeBlocks.map { item -> item.refBuilder.name to codeBlocks.count { it.refBuilder.refs.contains(item.refBuilder.name) } }.toMap()
-            codeBlocks.sortWith(Comparator { a, b ->
-                val bDepsA = a.refBuilder.refs.contains(b.refBuilder.name)
-                val aDepsB = b.refBuilder.refs.contains(a.refBuilder.name)
-                if(bDepsA && aDepsB || (!bDepsA && !aDepsB)) 0
-                else if(bDepsA) 1 else -1
-            })
+            val noRefs = codeBlocks.filter { it.refBuilder.refs.isEmpty() }
+            val hasRefs =  codeBlocks.filter { it.refBuilder.refs.isNotEmpty() }
+            val orderedCodeBlocks = noRefs + dependencyTreeFor(hasRefs)
             return CodeBlock.builder().also { builder ->
-                codeBlocks.forEach{ codeBlock ->
+                orderedCodeBlocks.forEach{ codeBlock ->
                     val code = if(refCounts[codeBlock.refBuilder.name] == 0) codeBlock.refBuilder.code
                     else "val ${codeBlock.refBuilder.name.variableName()} = ${codeBlock.refBuilder.code}"
                     builder.add(code + "\n", *codeBlock.objectList.toTypedArray()) }
