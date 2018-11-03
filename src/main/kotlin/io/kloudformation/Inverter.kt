@@ -14,13 +14,13 @@ import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.Output
 import io.kloudformation.specification.SpecificationPoet
-import java.io.File
 import java.lang.IllegalArgumentException
+import java.nio.file.Paths
 
 fun main(args: Array<String>){
     try {
         Inverter.invert(Inverter::class.java.classLoader.getResource("sandbox.yml").readText())
-                .writeTo(File("/Users/chrisbarbour/Code/kloudformation/kloudformation-specification/target/generated-sources"))
+              .writeTo(Paths.get("target/generated-sources"))
     }
     catch(e: Exception){
         if(e.message != null) error(e.message.toString()) else e.printStackTrace()
@@ -792,25 +792,32 @@ object Inverter{
             }
         }
 
-        private fun dependencyTreeFor(codeBuilders: List<CodeBuilder>): List<CodeBuilder>{
-            val rootNodes = codeBuilders.filter { node -> codeBuilders.find { it.refBuilder.refs.contains(node.refBuilder.name) } == null }
-            val leftOvers = codeBuilders.filter { !rootNodes.contains(it) }.map {
-                CodeBuilder(it.objectList, it.refBuilder.copy(refs = it.refBuilder.refs.filter { name -> rootNodes.find { it.refBuilder.name == name } == null }.toMutableList()))
+        val depsResolved: (List<String>) -> (CodeBuilder) -> Boolean = { l ->
+            { cb ->
+                with (cb.refBuilder) {
+                    when {
+                        refs.isEmpty() -> true
+                        else -> (l intersect refs) == refs
+
+                    }
+                }
             }
-            if(leftOvers.isEmpty()){
-                return rootNodes + leftOvers
-            }
-            return rootNodes + leftOvers + dependencyTreeFor(leftOvers)
+        }
+
+        private fun dependencyTreeFor(depTree: List<CodeBuilder>, resolvedDeps: List<CodeBuilder> = emptyList(),
+                               lastResolved: List<CodeBuilder> = emptyList()): Pair<List<CodeBuilder>, List<CodeBuilder>> {
+            val (resolved, unresolved) = depTree.partition { depsResolved(resolvedDeps.map{it.refBuilder.name})(it) }
+            return if(resolved == lastResolved) resolvedDeps to unresolved
+            else dependencyTreeFor(unresolved, resolvedDeps + resolved, resolved)
         }
 
         private fun reorder(codeBuilders: List<CodeBuilder>): CodeBlock{
             val codeBlocks = codeBuilders.toMutableList()
             val refCounts = codeBlocks.map { item -> item.refBuilder.name to codeBlocks.count { it.refBuilder.refs.contains(item.refBuilder.name) } }.toMap()
-            val noRefs = codeBlocks.filter { it.refBuilder.refs.isEmpty() }
-            val hasRefs =  codeBlocks.filter { it.refBuilder.refs.isNotEmpty() }
-            val orderedCodeBlocks = noRefs + dependencyTreeFor(hasRefs)
+            val (orderedCodeBlocks, errorCodeDeps) = dependencyTreeFor(codeBlocks)
             return CodeBlock.builder().also { builder ->
-                orderedCodeBlocks.forEach{ codeBlock ->
+                //appending error code deps to be sorted by the compiler for now
+                (orderedCodeBlocks + errorCodeDeps).forEach{ codeBlock ->
                     val code = if(refCounts[codeBlock.refBuilder.name] == 0) codeBlock.refBuilder.code
                     else "val ${codeBlock.refBuilder.name.variableName()} = ${codeBlock.refBuilder.code}"
                     builder.add(code + "\n", *codeBlock.objectList.toTypedArray()) }
