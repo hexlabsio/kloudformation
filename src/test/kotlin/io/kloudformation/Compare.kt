@@ -3,7 +3,6 @@ package io.kloudformation
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import sun.jvm.hotspot.utilities.Assert
 import java.lang.AssertionError
 import kotlin.test.expect
 
