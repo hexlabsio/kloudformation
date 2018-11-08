@@ -14,13 +14,12 @@ import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.Output
 import io.kloudformation.specification.SpecificationPoet
+import java.io.File
 import java.lang.IllegalArgumentException
-import java.nio.file.Paths
 
 fun main(args: Array<String>){
     try {
-        Inverter.invert(Inverter::class.java.classLoader.getResource("sandbox.yml").readText())
-              .writeTo(Paths.get("target/generated-sources"))
+        Inverter.invert(File(args[0]).readText()).writeTo(File(args[1]))
     }
     catch(e: Exception){
         if(e.message != null) error(e.message.toString()) else e.printStackTrace()
