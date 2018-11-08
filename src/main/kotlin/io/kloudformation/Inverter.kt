@@ -36,7 +36,7 @@ object Inverter{
                 .readValue(fix(template))
     }
 
-    fun escape(value: String): String = value.replace("$", "\\$").replace("\n", "\\n")
+    fun escape(value: String): String = value.replace("\\", "\\\\").replace("$", "\\$")
 
     fun fix(template: String) = template.lines().map { line ->
            val cleaned =  clean(line)
@@ -387,7 +387,7 @@ object Inverter{
                 else {
                     val name = if(positive) "actions" else "notActions"
                     staticImports += "$kPackage.model.iam" to name
-                    "$name(${items.accumulate { "\"" + it.textValue() + "\"" }})"
+                    "$name(${items.accumulate { "\"" + escape(it.textValue()) + "\"" }})"
                 }
             }
             return "action = $value"
@@ -541,16 +541,16 @@ object Inverter{
                     val fields = listOfNotNull(
                             "logicalName = \"$name\"",
                             if(typeName != "String") "type = \"$typeName\"" else null,
-                            parameter["AllowedPattern"]?.let { "allowedPattern = \"${it.textValue()}\""},
+                            parameter["AllowedPattern"]?.let { "allowedPattern = \"${escape(it.textValue())}\""},
                             parameter["AllowedValues"]?.let { "allowedValues = listOf(${it.elementsAsList().accumulate()})"},
-                            parameter["ConstraintDescription"]?.let { "constraintDescription = \"${it.textValue()}\""},
-                            parameter["Default"]?.let { "default = \"${it.textValue()}\""},
-                            parameter["Description"]?.let { "description = \"${it.textValue()}\""},
-                            parameter["MaxLength"]?.let { "maxLength = \"${it.textValue()}\""},
-                            parameter["MaxValue"]?.let { "maxValue = \"${it.textValue()}\""},
-                            parameter["MinLength"]?.let { "minLength = \"${it.textValue()}\""},
-                            parameter["MinValue"]?.let { "minValue = \"${it.textValue()}\""},
-                            parameter["NoEcho"]?.let { "noEcho = \"${it.textValue()}\""}
+                            parameter["ConstraintDescription"]?.let { "constraintDescription = \"${escape(it.textValue())}\""},
+                            parameter["Default"]?.let { "default = \"${escape(it.textValue())}\""},
+                            parameter["Description"]?.let { "description = \"${escape(it.textValue())}\""},
+                            parameter["MaxLength"]?.let { "maxLength = \"${escape(it.textValue())}\""},
+                            parameter["MaxValue"]?.let { "maxValue = \"${escape(it.textValue())}\""},
+                            parameter["MinLength"]?.let { "minLength = \"${escape(it.textValue())}\""},
+                            parameter["MinValue"]?.let { "minValue = \"${escape(it.textValue())}\""},
+                            parameter["NoEcho"]?.let { "noEcho = \"${escape(it.textValue())}\""}
                             ).accumulate()
                     this + type
                     "val ${name.variableName()} = parameter<%T>($fields)"
@@ -593,7 +593,7 @@ object Inverter{
 
         private fun CodeBuilder.dependsOnFor(node: JsonNode): String =
             (if(node.isArray) node.elementsAsList() else listOf(node)).accumulate("listOf(", ")") {
-                val dependsOn = it.textValue()
+                val dependsOn = escape(it.textValue())
                 if(resources.containsKey(dependsOn)){
                     refBuilder.refs += dependsOn
                     dependsOn.variableName() + ".logicalName"
@@ -717,7 +717,7 @@ object Inverter{
                 val fields = listOfNotNull(
                         "logicalName" to "%S",
                         resource["DependsOn"]?.let { "dependsOn" to codeBuilder.dependsOnFor(it) },
-                        resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(it.textValue()) },
+                        resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(escape(it.textValue())) },
                         resource["Metadata"]?.let { "metadata" to codeBuilder.jsonFor(it) },
                         resource["CreationPolicy"]?.let { "creationPolicy" to codeBuilder.creationPolicyFor(it)},
                         resource["UpdatePolicy"]?.let { "updatePolicy" to codeBuilder.updatePolicyFor(it)},
@@ -747,8 +747,8 @@ object Inverter{
                 this + Output::class
                 val fields = listOfNotNull(
                         fieldNode["Value"]?.let { "value = " + valueString(it) },
-                        fieldNode["Description"]?.let { "description = \"${it.textValue()}\"" },
-                        fieldNode["Condition"]?.let { "condition = " + conditionReferenceFor(it.textValue())},
+                        fieldNode["Description"]?.let { "description = \"${escape(it.textValue())}\"" },
+                        fieldNode["Condition"]?.let { "condition = " + conditionReferenceFor(escape(it.textValue()))},
                         fieldNode["Export"]?.let { it["Name"]?.let { exportName ->
                             this + Output.Export::class
                             "export = %T(" + valueString(exportName) + ")"

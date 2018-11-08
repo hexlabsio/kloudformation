@@ -1,36 +1,31 @@
 package io.kloudformation
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import com.fasterxml.jackson.module.kotlin.readValue
-import io.kloudformation.model.KloudFormationTemplate
-import io.kloudformation.resource.ec2.RouteTable
-import io.kloudformation.resource.ec2.routeTable
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import kotlin.reflect.full.functions
-import kotlin.test.expect
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InverterParameterTest{
 
-    val testClass = "Parameters"
+    private val testClass = "Parameters"
 
-    @Test
-    fun `should have type String and correct logical name for empty object parameter`(){
-        compare("""{ "TestParameter": {}}""", testClass, "simpleParameter") {
-            with(Inverter.StackInverter(parameters = it.fieldsAsMap())) {
-                CodeBuilder().codeForParameters().toString().trim()
-            }
+    private fun compare(template: String, function: String) = compare(template, testClass, function) {
+        with(Inverter.StackInverter(parameters = it.fieldsAsMap())) {
+            CodeBuilder().codeForParameters().toString().trim()
         }
     }
 
     @Test
-    fun `should have type String but type set to Number when Number`(){
-        compare("""{ "TestParameter": { "Type": "Number" }}""", testClass, "numberParameter") {
-            with(Inverter.StackInverter(parameters = it.fieldsAsMap())) {
-                CodeBuilder().codeForParameters().toString().trim()
-            }
-        }
-    }
+    fun `should have type String and correct logical name for empty object parameter`() = compare("""{ "TestParameter": {}}""", "simpleParameter")
+
+    @Test
+    fun `should have type String but type set to Number when Number`() = compare("""{ "TestParameter": { "Type": "Number" }}""", "numberParameter")
+
+    @Test
+    fun `should have type String but type set to ListNumber when ListNumber`() = compare("""{ "TestParameter": { "Type": "List<Number>" }}""", "numberListParameter")
+
+    @Test
+    fun `should have type String but type set to CommaDelimitedList when CommaDelimitedList`() = compare("""{ "TestParameter": { "Type": "CommaDelimitedList" }}""", "commaParameter")
+
+    @Test
+    fun `should have escaped allowedPattern`() = compare("""{ "TestParameter": { "AllowedPattern": "\\d+" }}""", "escapedParameter")
 }

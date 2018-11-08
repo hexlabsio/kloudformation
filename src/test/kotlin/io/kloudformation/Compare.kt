@@ -12,8 +12,8 @@ fun JsonNode.fieldsAsMap() = fields().asSequence().map { it.key to it.value }.to
 interface MatchNoMatch
 data class Match(val line: String): MatchNoMatch
 data class NoMatch(val actual: String, val expected: String): MatchNoMatch
-fun compare(template: String, testClass: String, function: String, inversion: (JsonNode) -> String){
-    val testClass = InverterParameterTest::class.java.classLoader.getResource("testSources/$testClass.kt").readText().lines()
+fun compare(template: String, testClassName: String, function: String, inversion: (JsonNode) -> String){
+    val testClass = InverterParameterTest::class.java.classLoader.getResource("testSources/$testClassName.kt").readText().lines()
     data class Acc(var inFunction: Boolean = false, val lines: MutableList<String> = mutableListOf(), var opens: Int = 0)
     val lines = testClass.fold(Acc()){
         acc, line ->
@@ -32,6 +32,9 @@ fun compare(template: String, testClass: String, function: String, inversion: (J
         }
         acc
     }.lines.map { it.trim() }.filter { it.isNotEmpty() }
+    if(lines.isEmpty()){
+        throw AssertionError("Function with name $function was not found in test file named $testClassName")
+    }
     val actual = inversion(jackson.readValue(template)).lines().map { it.trim() }.filter { it.isNotEmpty() }
     val matchList = lines.foldIndexed(listOf<MatchNoMatch>()){
         index, acc, line ->
