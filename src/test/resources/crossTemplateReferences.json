@@ -1,0 +1,59 @@
+{
+  "Parameters": {
+    "QueueName": {
+      "Description": "Name of an existing EC2 KeyPair"
+    }
+  },
+  "Resources": {
+    "WindowsServerWaitHandle": {
+      "Type": "AWS::CloudFormation::WaitConditionHandle"
+    },
+    "MyQueue": {
+      "Type": "AWS::SQS::Queue",
+      "Properties": {
+        "QueueName": {
+          "Ref": "QueueName"
+        }
+      }
+    },
+    "WindowsServerWaitCondition": {
+      "Type": "AWS::CloudFormation::WaitCondition",
+      "DependsOn": "WindowsServer",
+      "Properties": {
+        "Handle": {
+          "Ref": "WindowsServerWaitHandle"
+        },
+        "Timeout": "1800"
+      }
+    },
+    "Subscription": {
+      "Type": "AWS::SNS::Subscription",
+      "Properties": {
+        "TopicArn": {
+          "Ref": "MyTopic"
+        }
+      }
+    },
+    "MyTopic": {
+      "Type": "AWS::SNS::Topic"
+    }
+  },
+  "Outputs": {
+    "SubscriptionArn": {
+      "Description": "ARN of Subscription",
+      "Value": {
+        "Ref": "Subscription"
+      }
+    },
+    "QueueARN": {
+      "Description": "ARN of newly created SQS Queue",
+      "Value": {
+        "Fn::GetAtt": [
+          "MyQueue",
+          "Arn"
+        ]
+      }
+    }
+  }
+}
+

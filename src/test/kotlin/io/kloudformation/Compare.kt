@@ -7,7 +7,7 @@ import java.lang.AssertionError
 import kotlin.test.expect
 
 private val jackson = jacksonObjectMapper()
-
+fun templateFrom(fileName: String) = Match::class.java.classLoader.getResource(fileName).readText()
 fun JsonNode.fieldsAsMap() = fields().asSequence().map { it.key to it.value }.toMap().toMutableMap()
 interface MatchNoMatch
 data class Match(val line: String): MatchNoMatch
@@ -32,10 +32,10 @@ fun compare(template: String, testClassName: String, function: String, inversion
         }
         acc
     }.lines.map { it.trim() }.filter { it.isNotEmpty() }
-    if(lines.isEmpty()){
-        throw AssertionError("Function with name $function was not found in test file named $testClassName")
-    }
     val actual = inversion(jackson.readValue(template)).lines().map { it.trim() }.filter { it.isNotEmpty() }
+    if(lines.isEmpty()){
+        throw AssertionError("Function with name $function was not found in test file named $testClassName\n${actual.fold(""){acc, it -> "$acc\n$it"}}")
+    }
     val matchList = lines.foldIndexed(listOf<MatchNoMatch>()){
         index, acc, line ->
         val actualLine = if(actual.size > index) actual[index] else ""

@@ -707,12 +707,12 @@ object Inverter{
             return "json(\n%>${jsonPartFor(node)}\n%<)"
         }
 
-        fun codeForResources(): CodeBlock = reorder(
+        fun codeForResources(refBuilder: RefBuilder = RefBuilder()): CodeBlock = reorder(
                 resources.map{ (name, resource) ->
                 val (_, typeInfo) = resource.resourceTypeInfo(name)
                 val functionName = typeInfo.name.decapitalize()
                 staticImports.add(typeInfo.canonicalPackage to functionName)
-                val codeBuilder = CodeBuilder(refBuilder = RefBuilder(name = name))
+                val codeBuilder = CodeBuilder(refBuilder = refBuilder.copy(name = name))
                 codeBuilder + name
                 val fields = listOfNotNull(
                         "logicalName" to "%S",
@@ -740,7 +740,7 @@ object Inverter{
             codeFrom("metadata(${jsonFor(it)})\n")
         } ?: CodeBlock.of("")
 
-        private fun CodeBuilder.codeForOutputs(node: JsonNode) = codeFrom(node["Outputs"]?.let {
+        fun CodeBuilder.codeForOutputs(node: JsonNode) = codeFrom(node["Outputs"]?.let {
             it.fieldsAsMap().accumulate("outputs(\n%>", "\n%<)\n"){
                 (name, fieldNode) ->
                 this + name
@@ -758,11 +758,13 @@ object Inverter{
             }
         } ?: "")
 
-        private fun functionForTemplate(node: JsonNode): FunSpec {
+        fun functionForTemplate(node: JsonNode): FunSpec {
             parameters.putAll(node.mapFromFieldNamed("Parameters"))
             conditions.putAll(node.mapFromFieldNamed("Conditions"))
             mappings.putAll(node.mapFromFieldNamed("Mappings"))
             resources.putAll(node.mapFromFieldNamed("Resources"))
+            val outputCodeBuilder = CodeBuilder()
+            val outputsCode = outputCodeBuilder.codeForOutputs(node)
             return FunSpec.builder(functionName)
                     .returns(KloudFormationTemplate::class)
                     .addCode("return %T.create {\n%>%>", KloudFormationTemplate::class)
@@ -770,8 +772,8 @@ object Inverter{
                     .addCode(CodeBuilder().codeForMetadata(node))
                     .addCode(CodeBuilder().codeForConditions())
                     .addCode(CodeBuilder().codeForMappings())
-                    .addCode(codeForResources())
-                    .addCode(CodeBuilder().codeForOutputs(node))
+                    .addCode(codeForResources(outputCodeBuilder.refBuilder))
+                    .addCode(outputsCode)
                     .addCode("%<}\n%<")
                     .build()
         }
