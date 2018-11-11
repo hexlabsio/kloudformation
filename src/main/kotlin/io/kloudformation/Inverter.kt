@@ -10,6 +10,7 @@ import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import com.squareup.kotlinpoet.*
+import io.kloudformation.Inverter.accumulate
 import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.Output
@@ -142,20 +143,21 @@ object Inverter{
         private fun JsonNode.fieldsAsMap() = fields().asSequence().toList().map { (key, value) -> key to value }.toMap()
         private fun JsonNode.mapFromFieldNamed(fieldName: String) = this[fieldName]?.fieldsAsList()?.map { it.key to it.value }?.toMap() ?: emptyMap()
 
-        private fun JsonNode.parameterType() = this["Type"]?.textValue().let {
-            (it ?: "String") to when(it){
+        private fun JsonNode.parameterType() = with(this["Type"]?.textValue() ?: "String") {
+            this to when (this) {
                 "List<Number>" -> ParameterizedTypeName.get(List::class, String::class)
                 "List<String>" -> ParameterizedTypeName.get(List::class, String::class)
                 "CommaDelimitedList" -> ParameterizedTypeName.get(List::class, String::class)
-                //TODO deal with others
-                else -> String::class
+                else -> if (startsWith("List")) ParameterizedTypeName.get(List::class, String::class) else String::class
             }
         }
 
         private fun JsonNode.properties() = this["Properties"]?.fieldsAsMap() ?: emptyMap()
 
-        private fun JsonNode.resourceTypeInfo(name: String) = this["Type"]?.textValue()?.let {
-            it to ( resourceInfo[it] ?: throw InverterException("Did not have enough information to discover type $it"))
+        private fun JsonNode.resourceTypeInfo(name: String) = this["Type"]?.textValue()?.let { custom ->
+            val customResource = custom.startsWith("Custom::")
+            val typeName = if(customResource)"AWS::CloudFormation::CustomResource" else custom
+            custom to ( resourceInfo[typeName]?.let { if(customResource) it.copy(type = custom) else it } ?: throw InverterException("Did not have enough information to discover type $custom"))
         } ?: throw IllegalArgumentException("Could not read type of resource with logical name $name")
 
         private fun CodeBuilder.valueTypeFor(value: JsonNode, expectedType: ResourceTypeInfo) =
@@ -722,7 +724,15 @@ object Inverter{
                     (propertyName, propertyType) ->
                     codeBuilder.createFunctionFrom(resource.properties(), propertyName, propertyType)
                 }
-                codeBuilder.refBuilder = codeBuilder.refBuilder.copy(code = required + if(notRequired.isEmpty())"" else "{\n%>$notRequired\n%<}")
+                val properties = resource.properties()
+                val isCustomCustomResource = typeInfo.type.startsWith("Custom::")
+                val totalPropertyList = typeInfo.required.keys + typeInfo.notRequired.keys
+                val customInfo = properties.filter { p -> totalPropertyList.find { it.equals(p.key, true) } == null }.let {
+                    if(it.isNotEmpty()) it.accumulate((if(isCustomCustomResource) typeInfo.type else "" ) + "properties = mapOf(\n",  ")",",\n") {
+                        "\"${it.key}\" to ${codeBuilder.valueString(it.value)}"
+                    } else ""
+                }
+                codeBuilder.refBuilder = codeBuilder.refBuilder.copy(code = required + (if(notRequired.isEmpty())"" else "{\n%>$notRequired\n%<}") + if(customInfo.isNotEmpty()) ".asCustomResource($customInfo)" else "")
                 codeBuilder
             }
         )

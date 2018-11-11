@@ -447,31 +447,40 @@ Shown Below:
 
 ```kotlin
 val template = KloudFormationTemplate.create {
+    val topic = topic()
     val standardCustomResource = customResource(
             logicalName = "DatabaseInitializer",
             serviceToken = +"arn:aws::xxxx:xxx",
             metadata = json(mapOf(
                     "SomeKey" to "SomeValue"
             ))
-    )
+    ).asCustomResource(properties = mapOf(
+        "A" to "B",
+        "C" to topic.ref()
+    ))
     val customNameCustomResource = customResource(
             logicalName = "DatabaseInitializer2",
             serviceToken = +"arn:aws::xxxx:xxx",
             metadata = json(mapOf(
                     "SomeKey" to "SomeValue"
             ))
-    ).asCustomResource("DBInit")
+    ).asCustomResource("Custom::DBInit")
 }
 
 // Result
 // AWSTemplateFormatVersion: "2010-09-09"
 // Resources:
+//   Topic:
+//     Type: "AWS::SNS::Topic"
 //   DatabaseInitializer:
 //     Type: "AWS::CloudFormation::CustomResource"
 //     Metadata:
 //       SomeKey: "SomeValue"
 //     Properties:
 //       ServiceToken: "arn:aws::xxxx:xxx"
+//       A: "B"
+//       C:
+//         Ref: "Topic"
 //   DatabaseInitializer2:
 //     Type: "Custom::DBInit"
 //     Metadata:
