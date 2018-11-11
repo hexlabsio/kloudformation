@@ -14,15 +14,49 @@ import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.Output
 import io.kloudformation.specification.SpecificationPoet
+import org.yaml.snakeyaml.Yaml
+import org.yaml.snakeyaml.constructor.AbstractConstruct
+import org.yaml.snakeyaml.constructor.Constructor
+import org.yaml.snakeyaml.nodes.*
 import java.io.File
 import java.lang.IllegalArgumentException
 
 fun main(args: Array<String>){
     try {
-        Inverter.invert(File(args[0]).readText()).writeTo(File(args[1]))
+    val fileText = File(args[0]).readText()
+    val standard = mapToStandard(fileText)
+        Inverter.invert(standard).writeTo(File(args[1]))
     }
     catch(e: Exception){
         if(e.message != null) error(e.message.toString()) else e.printStackTrace()
+    }
+}
+
+fun mapToStandard(yaml: String) = with(Yaml(AwsConstructor)){dump(load(yaml)).substringAfter("\n").trimStart() }
+
+object AwsConstructor : Constructor() {
+    private val arrayNodes = listOf("Cidr", "And", "Equals", "If", "Not", "Or", "FindInMap", "GetAtt", "Join", "Select", "Split", "Sub")
+    private val objectNodes = listOf("Base64", "GetAZs", "ImportValue", "Transform")
+    private val mappings = arrayNodes.map { it to { node: Node -> mapOf("Fn::$it" to node.arrayValue()) } }.toMap() +
+            objectNodes.map { it to { node: Node -> mapOf("Fn::$it" to node.objectValue()) } }.toMap() +
+            ("Ref" to { node -> mapOf("Ref" to node.stringValue()) })
+
+    private fun Node.stringValue() = (this as ScalarNode).value
+    private fun Node.arrayValue(): Any = when (this) {
+        is SequenceNode -> constructSequence(this)
+        else -> this.stringValue()
+    }
+    private fun Node.objectValue(): Any = when (this) {
+        is MappingNode -> constructMapping(this)
+        else -> this.stringValue()
+    }
+
+    init {
+        mappings.forEach { tag, construct ->
+            this.yamlConstructors[Tag("!$tag")] = object : AbstractConstruct() {
+                override fun construct(node: Node): Any = construct(node)
+            }
+        }
     }
 }
 
@@ -33,53 +67,10 @@ object Inverter{
     fun invert(template: String): FileSpec{
         return ObjectMapper(YAMLFactory())
                 .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter()))
-                .readValue(fix(template))
+                .readValue(template)
     }
 
     fun escape(value: String): String = value.replace("\\", "\\\\").replace("$", "\\$")
-
-    fun fix(template: String) = template.lines().map { line ->
-           val cleaned =  clean(line)
-            println(cleaned)
-            cleaned
-        }.accumulate("","", "\n")
-
-    fun clean(line: String): String{
-        return if(line.contains("!Ref")){
-            val reference = line.substringAfter("!Ref").trimStart()
-            val before = line.substringBefore("!Ref")
-
-            before + if(before.trim().endsWith(":")) {
-                val startOfText = before.trimEnd().lastIndexOf(" ")
-                val indent = (0 .. startOfText).toList().accumulate(separator = ""){ " " }
-                "\n$indent  Ref: $reference"
-            } else "Ref: $reference"
-        } else if(line.contains("!GetAtt")){
-            val reference = line.substringAfter("!GetAtt").trimStart()
-            val before = line.substringBefore("!GetAtt")
-            val first = reference.substringBefore(".").trim()
-            val rest = reference.substringAfter(".").trim()
-            before + if(before.trim().endsWith(":")) {
-                val startOfText = before.trimEnd().lastIndexOf(" ")
-                val indent = (0 .. startOfText).toList().accumulate(separator = ""){ " " }
-                "\n$indent  \"Fn::GetAtt\": [ \"$first\", \"$rest\" ]"
-            } else "\"Fn::GetAtt\": [ \"$first\", \"$rest\" ]"
-        } else if(line.contains("!Sub")){
-            val subString = line.substringAfter("!Sub").trim()
-            val before = line.substringBefore("!Sub")
-            if(subString.isEmpty()){
-                ""
-            }
-            else{
-                before + if(before.trim().endsWith(":")) {
-                    val startOfText = before.trimEnd().lastIndexOf(" ")
-                    val indent = (0 .. startOfText).toList().accumulate(separator = ""){ " " }
-                    "\n$indent \"Fn::Sub\": \"$subString\""
-                } else "\"Fn::Sub\": \"$subString\""
-            }
-        }
-        else line
-    }
 
 
     private const val kPackage = "io.kloudformation"
