@@ -1,5 +1,88 @@
 # Kloud Formation
 
+# Get Started
+
+KloudFormation can be run a couple of different ways:
+
+1. As a Jar with `java -jar kloudformation.jar io.kloudformation.StackBuilderKt <name of StackBuilder Class> <name of output file>`
+2. In your project as a test dependency
+
+## Maven
+1. Create a directory under the `src` folder named `stack`
+2. Add a new file under the `stack` folder named `kloudformation.kt`
+3. Create a class named `Stack` that implements `io.kloudformation.StackBuilder`
+4. Implement the function named `KloudFormation.create()` 
+5. Add the following to the pom.xml:
+
+### Dependency
+```xml
+<dependency>
+    <groupId>io.kloudformation</groupId>
+    <artifactId>kloudformation</artifactId>
+    <version>${kloudformation.version}</version>
+    <scope>test</scope>
+</dependency>
+```
+
+### Plugins
+Depending on your project the kotlin maven plugin may look different but the key change is that the folder including the stack code is listed under the test-compile sources as shown below.
+
+If you are using java only you can omit the compile execution.
+```xml
+<plugin>
+    <artifactId>kotlin-maven-plugin</artifactId>
+    <groupId>org.jetbrains.kotlin</groupId>
+    <version>${kotlin.version}</version>
+    <executions>
+        <execution>
+            <id>compile</id>
+            <goals>
+                <goal>compile</goal>
+            </goals>
+            <configuration>
+                <sourceDirs>
+                    <sourceDir>${project.basedir}/src/main/kotlin</sourceDir>
+                </sourceDirs>
+            </configuration>
+        </execution>
+        <execution>
+            <id>test-compile</id>
+            <goals>
+                <goal>test-compile</goal>
+            </goals>
+            <configuration>
+                <sourceDirs>
+                    <sourceDir>${project.basedir}/src/test/kotlin</sourceDir>
+                    <sourceDir>${project.basedir}/src/stack</sourceDir>
+                </sourceDirs>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+<plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>1.4.0</version>
+    <executions>
+        <execution>
+            <phase>process-test-classes</phase>
+            <goals>
+                <goal>java</goal>
+            </goals>
+            <configuration>
+                <mainClass>io.kloudformation.StackBuilderKt</mainClass>
+                <arguments>
+                    <argument>Stack</argument>
+                    <argument>${project.basedir}/template.yml</argument>
+                </arguments>
+                <classpathScope>test</classpathScope>
+            </configuration>
+        </execution>
+    </executions>
+</plugin>
+```
+
+# Building Templates in Kotlin
 
 ## Create a new  Template
 
