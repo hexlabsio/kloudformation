@@ -644,3 +644,10 @@ val template = KloudFormationTemplate.create {
 //     Type: "AWS::S3::Bucket"
 //     DeletionPolicy: "Retain"
 ```
+
+# Inversion - (Template to Code)
+Any cloudformation template can be translated to kloudformation kotlin code using this project.
+ 1. Download the jar from maven central or checkout the code and run mvn package.
+ 2. Open a terminal
+ 3. Run `java -jar kloudformation.jar <location of template> <directory to generate code>`
+ 
