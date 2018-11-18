@@ -4,11 +4,18 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>io.kloudformation</groupId>
-    <artifactId>kloudformation-specification</artifactId>
+    <artifactId>kloudformation</artifactId>
     <version>1.0-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>KloudFormation Specification</name>
+    <name>KloudFormation</name>
+
+    <repositories>
+        <repository>
+            <id>bintray</id>
+            <url>https://dl.bintray.com/hexlabsio/kloudformation</url>
+        </repository>
+    </repositories>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -134,9 +141,8 @@
         <dependency>
             <groupId>io.kloudformation</groupId>
             <artifactId>kloudformation-specification-generator</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>0.1.4</version>
         </dependency>
-
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-test-junit5</artifactId>
