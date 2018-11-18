@@ -20,7 +20,7 @@
     <distributionManagement>
         <repository>
             <id>bintray-repo</id>
-            <url>https://api-bintray.com/maven/hexlabsio/kloudformation;publish=1</url>
+            <url>https://dl.bintray.com/hexlabsio/kloudformation;publish=1</url>
         </repository>
     </distributionManagement>
 
