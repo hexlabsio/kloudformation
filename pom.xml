@@ -5,7 +5,7 @@
 
     <groupId>io.kloudformation</groupId>
     <artifactId>kloudformation</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
     <name>KloudFormation</name>
@@ -17,9 +17,16 @@
         </repository>
     </repositories>
 
+    <distributionManagement>
+        <repository>
+            <id>bintray-repo</id>
+            <url>https://api-bintray.com/maven/hexlabsio/kloudformation;publish=1</url>
+        </repository>
+    </distributionManagement>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <kotlin.version>1.2.50</kotlin.version>
+        <kotlin.version>1.3.10</kotlin.version>
         <jackson.version>2.9.5</jackson.version>
         <kotlinpoet.version>0.6.0</kotlinpoet.version>
         <maven-shade-plugin.version>3.1.0</maven-shade-plugin.version>
@@ -67,9 +74,6 @@
                         </goals>
                         <configuration>
                             <mainClass>io.kloudformation.specification.SpecificationGeneratorKt</mainClass>
-                            <arguments>
-
-                            </arguments>
                         </configuration>
                     </execution>
                 </executions>
@@ -79,7 +83,18 @@
                 <artifactId>build-helper-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>generated-sources</id>
                         <phase>generate-sources</phase>
+                        <goals><goal>add-source</goal></goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>generated-test-sources</id>
+                        <phase>generate-test-sources</phase>
                         <goals><goal>add-source</goal></goals>
                         <configuration>
                             <sources>
@@ -91,7 +106,6 @@
             </plugin>
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <!-- latest version (2.20.1) does not work well with JUnit5 -->
                 <version>2.19.1</version>
                 <dependencies>
                     <dependency>
