@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer
 import com.fasterxml.jackson.databind.module.SimpleModule
+import com.fasterxml.jackson.databind.node.JsonNodeFactory
+import com.fasterxml.jackson.databind.node.TextNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -36,12 +38,21 @@ fun main(args: Array<String>){
 fun mapToStandard(yaml: String) = with(Yaml(AwsConstructor)){dump(load(yaml)).substringAfter("\n").trimStart() }
 
 object AwsConstructor : Constructor() {
-    private val arrayNodes = listOf("Cidr", "And", "Equals", "If", "Not", "Or", "FindInMap", "GetAtt", "Join", "Select", "Split", "Sub")
+    private val arrayNodes = listOf("Cidr", "And", "Equals", "If", "Not", "Or", "FindInMap", "Join", "Select", "Split", "Sub")
     private val objectNodes = listOf("Base64", "GetAZs", "ImportValue", "Transform")
     private val mappings = arrayNodes.map { it to { node: Node -> mapOf("Fn::$it" to node.arrayValue()) } }.toMap() +
             objectNodes.map { it to { node: Node -> mapOf("Fn::$it" to node.objectValue()) } }.toMap() +
-            ("Ref" to { node -> mapOf("Ref" to node.stringValue()) })
+            ("Ref" to { node -> mapOf("Ref" to node.stringValue()) }) +
+            ("GetAtt" to { node -> mapOf("Fn::GetAtt" to node.attributeValue()) })
 
+    private fun Node.attributeValue() = if(this is TextNode){
+        val firstComponent = this.asText().substringBefore(".")
+        val otherComponents = this.asText().substringAfter(".")
+        JsonNodeFactory.instance.arrayNode().also {
+            it.add(firstComponent)
+            it.add(otherComponents)
+        }
+    } else arrayValue()
     private fun Node.stringValue() = (this as ScalarNode).value
     private fun Node.arrayValue(): Any = when (this) {
         is SequenceNode -> constructSequence(this)
