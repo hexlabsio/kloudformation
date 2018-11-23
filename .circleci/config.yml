@@ -23,9 +23,7 @@ jobs:
     - store_test_results:
         path: ~/junit
     - store_artifacts:
-        paths:
-        - pom.xml
-        - ~/junit
+        path: pom.xml
     - save_cache:
         paths:
         - ~/.m2
