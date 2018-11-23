@@ -35,7 +35,7 @@ fun main(args: Array<String>){
     }
 }
 
-fun mapToStandard(yaml: String) = with(Yaml(AwsConstructor)){dump(load(yaml)).substringAfter("\n").trimStart() }
+fun mapToStandard(yaml: String) = with(Yaml(AwsConstructor)){dump(load(yaml)).trim() }
 
 object AwsConstructor : Constructor() {
     private val arrayNodes = listOf("Cidr", "And", "Equals", "If", "Not", "Or", "FindInMap", "Join", "Select", "Split", "Sub")
@@ -48,10 +48,7 @@ object AwsConstructor : Constructor() {
     private fun Node.attributeValue() = if(this is ScalarNode){
         val firstComponent = this.value.substringBefore(".")
         val otherComponents = this.value.substringAfter(".")
-        JsonNodeFactory.instance.arrayNode().also {
-            it.add(firstComponent)
-            it.add(otherComponents)
-        }
+        listOf(firstComponent, otherComponents)
     } else arrayValue()
     private fun Node.stringValue() = (this as ScalarNode).value
     private fun Node.arrayValue(): Any = when (this) {
