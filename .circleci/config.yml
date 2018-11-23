@@ -10,7 +10,7 @@ jobs:
         keys:
         - maven-{{ checksum "pom.xml" }}
     - run: mvn versions:set -DnewVersion=0.1.$CIRCLE_BUILD_NUM
-    - run: mvn -s settings.xml -DskipTests=true deploy
+    - run: MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" && mvn -s settings.xml -B -DskipTests=true deploy
     - store_artifacts:
         path: target/kloudformation-0.1.$CIRCLE_BUILD_NUM.jar
     - save_cache:
