@@ -11,9 +11,21 @@ jobs:
         keys:
         - maven-{{ checksum "pomCopy.xml" }}
     - run: mvn versions:set -DnewVersion=0.1.$CIRCLE_BUILD_NUM
-    - run: MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" && mvn -s settings.xml -B deploy
+    - run:
+        name: Maven Test Package and Deploy
+        command: MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" && mvn -s settings.xml -B deploy
+    - run:
+        name: Save test results
+        command: |
+          mkdir -p ~/junit/
+          find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/junit/ \;
+        when: always
+    - store_test_results:
+        path: ~/junit
     - store_artifacts:
-        path: pom.xml
+        path:
+        - pom.xml
+        - ~/junit
     - save_cache:
         paths:
         - ~/.m2
