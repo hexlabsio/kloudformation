@@ -19,13 +19,15 @@ jobs:
     - run:
         name: Save test results
         command: |
-          mkdir -p ~/junit/
-          find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/junit/ \;
+          mkdir -p junit
+          ls -ltr target/surefire-reports
+          find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ./junit/ \;
+          ls -ltr junit
         when: always
     - store_test_results:
-        path: ~/junit
+        path: junit
     - store_artifacts:
-        path: ~/junit
+        path: junit
     - store_artifacts:
         path: pom.xml
     - save_cache:
