@@ -11,7 +11,7 @@ jobs:
         keys:
         - maven-{{ checksum "pomCopy.xml" }}
     - run: mvn versions:set -DnewVersion=0.1.$CIRCLE_BUILD_NUM
-    - run: MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" && mvn -s settings.xml -B -DskipTests=true deploy
+    - run: MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" && mvn -s settings.xml -B deploy
     - store_artifacts:
         path: pom.xml
     - save_cache:
