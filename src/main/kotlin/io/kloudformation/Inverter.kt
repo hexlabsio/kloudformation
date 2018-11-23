@@ -45,9 +45,9 @@ object AwsConstructor : Constructor() {
             ("Ref" to { node -> mapOf("Ref" to node.stringValue()) }) +
             ("GetAtt" to { node -> mapOf("Fn::GetAtt" to node.attributeValue()) })
 
-    private fun Node.attributeValue() = if(this is TextNode){
-        val firstComponent = this.asText().substringBefore(".")
-        val otherComponents = this.asText().substringAfter(".")
+    private fun Node.attributeValue() = if(this is ScalarNode){
+        val firstComponent = this.value.substringBefore(".")
+        val otherComponents = this.value.substringAfter(".")
         JsonNodeFactory.instance.arrayNode().also {
             it.add(firstComponent)
             it.add(otherComponents)
