@@ -736,7 +736,7 @@ object Inverter{
                 val isCustomCustomResource = typeInfo.type.startsWith("Custom::")
                 val totalPropertyList = typeInfo.required.keys + typeInfo.notRequired.keys
                 val customInfo = properties.filter { p -> totalPropertyList.find { it.equals(p.key, true) } == null }.let {
-                    if(it.isNotEmpty()) it.accumulate((if(isCustomCustomResource) typeInfo.type else "" ) + "properties = mapOf(\n",  ")",",\n") {
+                    if(it.isNotEmpty()) it.accumulate((if(isCustomCustomResource) "\"${typeInfo.type}\", " else "" ) + "properties = mapOf(\n",  ")",",\n") {
                         "\"${it.key}\" to ${codeBuilder.valueString(it.value)}"
                     } else ""
                 }
