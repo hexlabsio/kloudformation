@@ -116,12 +116,6 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>2.19.1</version>
-                <configuration>
-                    <argLine>-Xmx1024m -Xms1024m -XX:MaxPermSize=512m -Djdk.net.URLClassPath.disableClassPathURLCheck=true</argLine>
-                    <includes>
-                        <include>**/*Test.kt</include>
-                    </includes>
-                </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>org.junit.platform</groupId>
