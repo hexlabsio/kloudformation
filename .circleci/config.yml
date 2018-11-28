@@ -21,7 +21,7 @@ jobs:
         command: |
           mkdir -p junit
           ls -ltr
-          ls -ltr ./target/surefire-reports
+          ls -ltr ./target
           find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ./junit/ \;
           ls -ltr ./junit
         when: always
