@@ -9,7 +9,7 @@ import java.io.File
 typealias KloudFormation = KloudFormationTemplate.Builder
 
 fun main(args: Array<String>) {
-    fun arg(name: String, index: Int, default: String? = null) = if(args.size >= index) {
+    fun arg(name: String, index: Int, default: String? = null) = if(index >= args.size) {
         default ?: throw IllegalArgumentException("$name argument is required at position $index")
     } else args[index]
     val className = arg("Class name", 0)
