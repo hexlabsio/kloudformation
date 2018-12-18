@@ -145,6 +145,16 @@
                         <configuration>
                             <shadedArtifactAttached>true</shadedArtifactAttached>
                             <shadedClassifierName>uber</shadedClassifierName>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>io.kloudformation.StackBuilderKt </mainClass>
+                                </transformer>
+                            </transformers>
+                            <artifactSet>
+                                <excludes>
+                                    <exclude>org.jetbrains.kotlin</exclude>
+                                </excludes>
+                            </artifactSet>
                         </configuration>
                     </execution>
                 </executions>
@@ -161,7 +171,7 @@
         <dependency>
             <groupId>io.kloudformation</groupId>
             <artifactId>kloudformation-specification-generator</artifactId>
-            <version>0.1.6</version>
+            <version>0.1.9</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
