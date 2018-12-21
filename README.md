@@ -8,6 +8,8 @@
 
 KloudFormation can be run a couple of different ways:
 
+> An Example Maven project can be found [here](https://github.com/hexlabsio/kloudformation-specification-sandbox).
+
 1. As a Jar with `java -jar kloudformation.jar io.kloudformation.StackBuilderKt <name of StackBuilder Class> <name of output file>`
 2. In your project as a test dependency
 
