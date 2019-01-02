@@ -17,6 +17,7 @@ import io.kloudformation.function.*
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.Output
 import io.kloudformation.specification.SpecificationPoet
+import io.kloudformation.stack.io.kloudformation.EmptyObject
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.AbstractConstruct
 import org.yaml.snakeyaml.constructor.Constructor
@@ -93,7 +94,7 @@ object Inverter{
         val isValue = startsWith("$kPackage.Value")
         val isList = startsWith("List") || startsWith("kotlin.collections.List")
         val isMap = startsWith("kotlin.collections.Map")
-        val canonicalPackage = if(startsWith("AWS::") || equals("Tag")) canonicalPackageFor(this, false) else null
+        val canonicalPackage = if(startsWith("AWS::")  || equals("Tag")) canonicalPackageFor(this, false) else null
         val className = if(startsWith("AWS::")) substringAfterLast(".") else if(equals("Tag")) this else null
         val parameterA = when {
             isList || isValue -> substringAfter("<").substringBeforeLast(">")
@@ -281,9 +282,10 @@ object Inverter{
             val (delimiter, sourceString) = node.elementsAsList()
             this + Split::class
             this + delimiter
+            java.io.File("bob").writeText("Hello")
+            println(java.io.File("bob").readText())
             return "%T(%S, ${valueString(sourceString)})"
         }
-
         private fun CodeBuilder.subFrom(node: JsonNode, expectedType: ResourceTypeInfo): String =
              if(node.isArray){
                 val (string, variables) = node.elementsAsList()
@@ -342,25 +344,32 @@ object Inverter{
 
         private fun CodeBuilder.rawTypeFrom(node: JsonNode, propertyName: String? = null, expectedType: ResourceTypeInfo, explicit: Boolean = false) =
             if(node.isObject){
-                val (name, properties) = node.fields().next()
-                when (name) {
-                    "Fn::Join" -> joinFrom(properties)
-                    "Fn::Select" -> selectFrom(properties, expectedType)
-                    "Fn::If" -> ifFrom(properties, expectedType)
-                    "Fn::And" -> andOrFrom(properties, true)
-                    "Fn::Equals" -> equalsFrom(properties)
-                    "Fn::Not" -> notFrom(properties)
-                    "Fn::Or" -> andOrFrom(properties, false)
-                    "Fn::FindInMap" -> findInMapFrom(properties)
-                    "Fn::Base64" -> base64From(properties)
-                    "Fn::GetAtt" -> attFrom(properties, expectedType)
-                    "Ref" -> refFrom(properties.textValue(), expectedType, explicit)
-                    "Fn::GetAZs" -> getAzsFrom(properties)
-                    "Fn::ImportValue" -> importValueFrom(properties)
-                    "Fn::Split" -> splitFrom(properties)
-                    "Fn::Sub" -> subFrom(properties, expectedType)
-                    "Condition" -> conditionFrom(properties)
-                    else -> "+\"UNKNOWN\""
+                val fields = node.fields()
+                if(fields.hasNext()) {
+                    val (name, properties) = fields.next()
+                    when (name) {
+                        "Fn::Join" -> joinFrom(properties)
+                        "Fn::Select" -> selectFrom(properties, expectedType)
+                        "Fn::If" -> ifFrom(properties, expectedType)
+                        "Fn::And" -> andOrFrom(properties, true)
+                        "Fn::Equals" -> equalsFrom(properties)
+                        "Fn::Not" -> notFrom(properties)
+                        "Fn::Or" -> andOrFrom(properties, false)
+                        "Fn::FindInMap" -> findInMapFrom(properties)
+                        "Fn::Base64" -> base64From(properties)
+                        "Fn::GetAtt" -> attFrom(properties, expectedType)
+                        "Ref" -> refFrom(properties.textValue(), expectedType, explicit)
+                        "Fn::GetAZs" -> getAzsFrom(properties)
+                        "Fn::ImportValue" -> importValueFrom(properties)
+                        "Fn::Split" -> splitFrom(properties)
+                        "Fn::Sub" -> subFrom(properties, expectedType)
+                        "Condition" -> conditionFrom(properties)
+                        else -> "+\"UNKNOWN\""
+                    }
+                }
+                else {
+                    this + EmptyObject::class
+                    "%T()"
                 }
             } else {
                 valueTypeFor(node, expectedType)

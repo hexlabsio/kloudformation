@@ -1,6 +1,6 @@
 # Kloud Formation
 [![CircleCI](https://circleci.com/gh/hexlabsio/kloudformation/tree/master.svg?style=svg)](https://circleci.com/gh/hexlabsio/kloudformation/tree/master)
-[ ![Download](https://api.bintray.com/packages/hexlabsio/kloudformation/kloudformation/images/download.svg?version=0.1.12) ](https://bintray.com/hexlabsio/kloudformation/kloudformation/0.1.12/link)
+[ ![Download](https://api.bintray.com/packages/hexlabsio/kloudformation/kloudformation/images/download.svg) ](https://bintray.com/hexlabsio/kloudformation/kloudformation)
 
 ![KloudFormation](kloud-formation-logo-white.png)
 
