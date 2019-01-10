@@ -2,8 +2,8 @@ package testSources
 
 import io.kloudformation.json
 import io.kloudformation.model.KloudFormationTemplate
-import io.kloudformation.resource.cloudformation.waitConditionHandle
-import io.kloudformation.resource.sqs.queue
+import io.kloudformation.resource.aws.cloudformation.waitConditionHandle
+import io.kloudformation.resource.aws.sqs.queue
 
 object Resources{
     fun KloudFormationTemplate.Builder.nameCheck(){

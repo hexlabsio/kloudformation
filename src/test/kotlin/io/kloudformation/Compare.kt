@@ -30,6 +30,9 @@ fun compare(template: String, testClassName: String, function: String, inversion
             acc.opens++
             acc.inFunction = true
         }
+        else if(line.trim().endsWith("{") && acc.inFunction){
+            acc.opens++
+        }
         acc
     }.lines.map { it.trim() }.filter { it.isNotEmpty() }
     val actual = inversion(jackson.readValue(template)).lines().map { it.trim() }.filter { it.isNotEmpty() }

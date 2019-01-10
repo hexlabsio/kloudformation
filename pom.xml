@@ -171,7 +171,7 @@
         <dependency>
             <groupId>io.kloudformation</groupId>
             <artifactId>kloudformation-specification-generator</artifactId>
-            <version>0.1.9</version>
+            <version>0.1.26</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

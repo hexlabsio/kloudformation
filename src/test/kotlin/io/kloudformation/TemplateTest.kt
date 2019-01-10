@@ -18,9 +18,9 @@ class TemplateTest{
         with(Inverter.StackInverter(parameters = parameters, resources = resources)) {
             val outputCodeBuilder = CodeBuilder()
             val outputsCode = outputCodeBuilder.codeForOutputs(it)
-                    CodeBuilder().codeForParameters().toString().trim() + "\n" +
-                    codeForResources(outputCodeBuilder.refBuilder).toString().trim() + "\n" +
-                            outputsCode.toString().trim()
+            CodeBuilder().codeForParameters().toString().trim() + "\n" +
+            codeForResources(outputCodeBuilder.refBuilder).toString().trim() + "\n" +
+            outputsCode.toString().trim()
         }
     }
 
