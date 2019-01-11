@@ -192,7 +192,7 @@ object Inverter {
                         }
                     }
                     expectedType.map -> {
-                        value.fieldsAsMap().accumulate("+mapOf(\n%>", "\n%<", ",\n") { (name, node) ->
+                        value.fieldsAsMap().accumulate("+mapOf(\n⇥", "\n⇤", ",\n") { (name, node) ->
                             this + name
                             "%S to " + value(node, expectedTypeInfo = expectedType.parameterB!!)
                         }
@@ -234,7 +234,7 @@ object Inverter {
             } else {
                 this + Join::class
                 this + splitter.asText()
-                "%T(%S, ${items.elementsAsList().map { valueString(it) }.accumulate("listOf(\n%>", "\n%<)", separator = ", \n") { it }})"
+                "%T(%S, ${items.elementsAsList().map { valueString(it) }.accumulate("listOf(\n⇥", "\n⇤)", separator = ", \n") { it }})"
             }
         }
 
@@ -474,7 +474,7 @@ object Inverter {
                     node["NotPrincipal"]?.let { principalFrom(it, false) },
                     node["Condition"]?.let { iamConditionFrom(it) }
             ).accumulate(separator = "\n")
-            return "statement($parameters)" + if (body.isNotEmpty()) "{\n%>$body%<\n}\n" else "\n"
+            return "statement($parameters)" + if (body.isNotEmpty()) "{\n⇥$body⇤\n}\n" else "\n"
         }
 
         private fun CodeBuilder.policyDocOrJsonFrom(propertyName: String?, expectedTypeInfo: ResourceTypeInfo, node: JsonNode): String {
@@ -488,7 +488,7 @@ object Inverter {
                 ).accumulate()
                 val statements = node["Statement"]?.let { if (it.isArray) it.elementsAsList() else listOf(it) }.orEmpty()
                 val body = statements.accumulate(separator = "\n") { statementFrom(it) }
-                "policyDocument($parameters){\n%>$body%<}\n"
+                "policyDocument($parameters){\n⇥$body⇤}\n"
             } else jsonFor(node)
             return if (propertyName != null && !expectedTypeInfo.required) "$propertyName($value)" else value
         }
@@ -503,13 +503,13 @@ object Inverter {
             } else if (expectedTypeInfo.list) {
                 val start = if (propertyName != null && !expectedTypeInfo.required) "$propertyName(" else ""
                 val end = if (propertyName != null && !expectedTypeInfo.required) ")" else ""
-                (if (node.isArray) node.elementsAsList() else listOf(node)).accumulate("${start}listOf(\n%>", "%<)$end", ",\n") { item ->
+                (if (node.isArray) node.elementsAsList() else listOf(node)).accumulate("${start}listOf(\n⇥", "⇤)$end", ",\n") { item ->
                     value(item, expectedTypeInfo.parameterA?.className?.decapitalize(), expectedTypeInfo = expectedTypeInfo.parameterA!!, explicit = explicit)
                 }
             } else if (expectedTypeInfo.map) {
                 val start = if (propertyName != null && !expectedTypeInfo.required) "$propertyName(" else ""
                 val end = if (propertyName != null && !expectedTypeInfo.required) ")" else ""
-                node.fieldsAsMap().accumulate("${start}mapOf(\n%>", "%<\n)$end", ",\n") { (name, item) ->
+                node.fieldsAsMap().accumulate("${start}mapOf(\n⇥", "⇤\n)$end", ",\n") { (name, item) ->
                     this + name
                     "%S to " + value(item, expectedTypeInfo.parameterB?.className?.decapitalize(), expectedTypeInfo = expectedTypeInfo.parameterB!!, explicit = explicit)
                 }
@@ -546,7 +546,7 @@ object Inverter {
                 name
             }
             val requiredList = requiredList(typeInfo.required, node)
-            val notRequiredList = notRequiredList(typeInfo.notRequired, node).let { if (it.isEmpty()) "\n" else "{\n%>$it\n%<}\n" }
+            val notRequiredList = notRequiredList(typeInfo.notRequired, node).let { if (it.isEmpty()) "\n" else "{\n⇥$it\n⇤}\n" }
             return "$typeName($requiredList)$notRequiredList"
         }
 
@@ -581,11 +581,11 @@ object Inverter {
 
         fun CodeBuilder.codeForMappings(): CodeBlock = codeFrom(
                 if (mappings.isNotEmpty()) {
-                    mappings.accumulate("mappings(\n%>", "\n%<)\n", separator = ",\n") { (name, node) ->
+                    mappings.accumulate("mappings(\n⇥", "\n⇤)\n", separator = ",\n") { (name, node) ->
                         this + name
-                        "%S to " + node.fieldsAsMap().accumulate("mapOf(\n%>", "\n%<)", ",\n") { (secondName, secondNode) ->
+                        "%S to " + node.fieldsAsMap().accumulate("mapOf(\n⇥", "\n⇤)", ",\n") { (secondName, secondNode) ->
                             this + secondName
-                            "%S to " + secondNode.fieldsAsMap().accumulate("mapOf(\n%>", "\n%<)", ",\n") { (leafName, leafNode) ->
+                            "%S to " + secondNode.fieldsAsMap().accumulate("mapOf(\n⇥", "\n⇤)", ",\n") { (leafName, leafNode) ->
                                 this + leafName
                                 "%S to " + valueString(leafNode)
                             }
@@ -698,14 +698,14 @@ object Inverter {
             return when {
                 node.isObject -> {
                     val fields = node.fieldsAsMap()
-                    fields.accumulate("mapOf(\n%>", "\n%<)") { (name, fieldNode) ->
+                    fields.accumulate("mapOf(\n⇥", "\n⇤)") { (name, fieldNode) ->
                         this + name
                         "%S to ${jsonPartFor(fieldNode)}"
                     }
                 }
                 node.isArray -> {
                     val elements = node.elementsAsList()
-                    elements.accumulate("listOf(\n%>", "\n%<)") { jsonPartFor(it) }
+                    elements.accumulate("listOf(\n⇥", "\n⇤)") { jsonPartFor(it) }
                 }
                 node.isTextual -> {
                     this + escape(node.asText()); "%S"
@@ -716,7 +716,7 @@ object Inverter {
 
         fun CodeBuilder.jsonFor(node: JsonNode): String {
             staticImports += kPackage to "json"
-            return "json(\n%>${jsonPartFor(node)}\n%<)"
+            return "json(\n⇥${jsonPartFor(node)}\n⇤)"
         }
 
         fun codeForResources(refBuilder: RefBuilder = RefBuilder()): CodeBlock = reorder(
@@ -749,7 +749,7 @@ object Inverter {
                             "\"${it.key}\" to ${codeBuilder.valueString(it.value)}"
                         } else ""
                     }
-                    codeBuilder.refBuilder = codeBuilder.refBuilder.copy(code = required + (if (notRequired.isEmpty()) "" else "{\n%>$notRequired\n%<}") + if (customInfo.isNotEmpty()) ".asCustomResource($customInfo)" else "")
+                    codeBuilder.refBuilder = codeBuilder.refBuilder.copy(code = required + (if (notRequired.isEmpty()) "" else "{\n⇥$notRequired\n⇤}") + if (customInfo.isNotEmpty()) ".asCustomResource($customInfo)" else "")
                     codeBuilder
                 }
         )
@@ -759,7 +759,7 @@ object Inverter {
         } ?: CodeBlock.of("")
 
         fun CodeBuilder.codeForOutputs(node: JsonNode) = codeFrom(node["Outputs"]?.let {
-            it.fieldsAsMap().accumulate("outputs(\n%>", "\n%<)\n") { (name, fieldNode) ->
+            it.fieldsAsMap().accumulate("outputs(\n⇥", "\n⇤)\n") { (name, fieldNode) ->
                 this + name
                 this + Output::class
                 val fields = listOfNotNull(
@@ -786,14 +786,14 @@ object Inverter {
             val outputsCode = outputCodeBuilder.codeForOutputs(node)
             return FunSpec.builder(functionName)
                     .returns(KloudFormationTemplate::class)
-                    .addCode("return %T.create {\n%>%>", KloudFormationTemplate::class)
+                    .addCode("return %T.create {\n⇥⇥", KloudFormationTemplate::class)
                     .addCode(CodeBuilder().codeForParameters())
                     .addCode(CodeBuilder().codeForMetadata(node))
                     .addCode(CodeBuilder().codeForConditions())
                     .addCode(CodeBuilder().codeForMappings())
                     .addCode(codeForResources(outputCodeBuilder.refBuilder))
                     .addCode(outputsCode)
-                    .addCode("%<}\n%<")
+                    .addCode("⇤}\n⇤")
                     .build()
         }
 
