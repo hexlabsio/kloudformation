@@ -171,7 +171,27 @@
         <dependency>
             <groupId>io.kloudformation</groupId>
             <artifactId>kloudformation-specification-generator</artifactId>
-            <version>0.1.26</version>
+            <version>0.1.40</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.module</groupId>
+            <artifactId>jackson-module-kotlin</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>2.9.8</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup</groupId>
+            <artifactId>kotlinpoet</artifactId>
+            <version>1.0.1</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>

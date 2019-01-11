@@ -20,6 +20,7 @@ import org.yaml.snakeyaml.constructor.Constructor
 import org.yaml.snakeyaml.nodes.*
 import java.io.File
 import java.lang.IllegalArgumentException
+import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
 
 fun main(args: Array<String>){
     try {
@@ -166,10 +167,10 @@ object Inverter {
 
         private fun JsonNode.parameterType() = with(this["Type"]?.textValue() ?: "String") {
             this to when (this) {
-                "List<Number>" -> ParameterizedTypeName.get(List::class, String::class)
-                "List<String>" -> ParameterizedTypeName.get(List::class, String::class)
-                "CommaDelimitedList" -> ParameterizedTypeName.get(List::class, String::class)
-                else -> if (startsWith("List")) ParameterizedTypeName.get(List::class, String::class) else String::class
+                "List<Number>" -> List::class.asClassName().parameterizedBy(String::class.asClassName())
+                "List<String>" -> List::class.asClassName().parameterizedBy(String::class.asClassName())
+                "CommaDelimitedList" -> List::class.asClassName().parameterizedBy(String::class.asClassName())
+                else -> if (startsWith("List")) List::class.asClassName().parameterizedBy(String::class.asClassName()) else String::class
             }
         }
 
@@ -847,7 +848,7 @@ object Inverter {
         override fun deserialize(parser: JsonParser, context: DeserializationContext): FileSpec =
                 FileSpec.builder("$kPackage.stack", className)
                         .addType(classForTemplate(parser.codec.readTree(parser)))
-                        .also { file -> staticImports.forEach { (pkg, name) -> file.addStaticImport(pkg, name) } }
+                        .also { file -> staticImports.forEach { (pkg, name) -> file.addImport(pkg, name) } }
                         .build()
     }
 }
