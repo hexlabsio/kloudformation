@@ -18,10 +18,10 @@ object CrossTemplate {
             handle(windowsServerWaitHandle.ref())
             timeout(+"1800")
         }
+        val myTopic = topic(logicalName = "MyTopic")
         val subscription = subscription(logicalName = "Subscription"){
             topicArn(myTopic.ref())
         }
-        val myTopic = topic(logicalName = "MyTopic")
         outputs(
                 "SubscriptionArn" to io.kloudformation.model.Output(value = subscription.ref(), description = "ARN of Subscription"), "QueueARN" to io.kloudformation.model.Output(value = io.kloudformation.function.Att<kotlin.String>(myQueue.logicalName, +"Arn"), description = "ARN of newly created SQS Queue")
         )
