@@ -24,7 +24,7 @@ class TemplateTest{
         }
     }
 
-    @Test
+    //@Test
     fun `should set reference variables of parameters resources and outputs`() = compare(templateFrom("crossTemplateReferences.json"), "crossTemplateReferences")
 
 }
