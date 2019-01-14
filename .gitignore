@@ -3,3 +3,5 @@ target
 .idea
 src/main/resources/info.json
 src/main/resources/sandbox.yml
+docs/_site
+docs/.sass-cache
