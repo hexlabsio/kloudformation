@@ -3,7 +3,6 @@ layout: default
 title: Templating
 parent: Advanced
 nav_order: 2
-permalink: /kloudformation/docs/advanced/templating
 ---
 <script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>
 <style>
