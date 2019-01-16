@@ -3,7 +3,7 @@ layout: default
 title: Maven
 parent: Get Started
 nav_order: 1
-permalink: /docs/get-started/maven
+permalink: /kloudformation/docs/get-started/maven
 ---
 <script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>
 <style>
