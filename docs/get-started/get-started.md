@@ -5,7 +5,7 @@ nav_order: 0
 has_children: true
 ---
 <script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>
-<img style="margin: -2em; margin-left: -4em" src="../../kloud-formation-logo-white.png"/>
+<img style="margin: -2em; margin-left: -4em" src="../kloud-formation-logo-white.png"/>
 
 ## Table of contents
 {: .no_toc .text-delta }
