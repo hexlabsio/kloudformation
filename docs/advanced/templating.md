@@ -49,7 +49,7 @@ s3Website {
 
 A **Module** is simply a packaged up set of KloudFormation steps that create Cloudformation template parts.
 
-Modules made up of **Parts** that can be modified by the user.
+Modules are made up of **Parts** that can be modified by the user.
 
 A Part can be anything but will most likely be a Cloudformation Resource or a **SubModule**
 
