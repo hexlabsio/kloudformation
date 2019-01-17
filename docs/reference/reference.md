@@ -15,7 +15,7 @@ Here is a list of equivalents and where to find each part in the reference
 | Cloudformation | KloudFormation | Reference |
 |---|---|---|
 |Metadata|metadata()||
-|Parameters|parameter<T>()||
+|Parameters|parameter<T>()|[Parameters](./parameters.html)|
 |Mappings|mappings()||
 |Conditions|condition()||
 |Resources|io.kloudformation.resource.*||
