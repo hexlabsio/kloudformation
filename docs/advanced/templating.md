@@ -21,7 +21,7 @@ blockquote{
 
 # Templating
 
-KloudFormation provides a way to build templates that modularise parts of Cloudformation for users.
+KloudFormation provides a way to build templates that modularise parts of CloudFormation for users.
 
 For example, building an S3 website is a regular task that can be wrapped into a function.
 
@@ -47,11 +47,11 @@ s3Website {
 
 # Building a Module
 
-A **Module** is simply a packaged up set of KloudFormation steps that create Cloudformation template parts.
+A **Module** is simply a packaged up set of KloudFormation steps that create CloudFormation template parts.
 
 Modules are made up of **Parts** that can be modified by the user.
 
-A Part can be anything but will most likely be a Cloudformation Resource or a **SubModule**
+A Part can be anything but will most likely be a CloudFormation Resource or a **SubModule**
 
 A **SubModule** is a **Module** that requires **Predefined** information from a parent **Module** in order to build its **Parts**
 

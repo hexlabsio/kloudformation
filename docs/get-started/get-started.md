@@ -15,7 +15,7 @@ has_children: true
 
 # KloudFormation
 
-KloudFormation is a one-to-one mapping of Amazon's Cloudformation generated into a Kotlin library allowing users to write type safe stacks in Kotlin.
+KloudFormation is a one-to-one mapping of Amazon's CloudFormation generated into a Kotlin library allowing users to write type safe stacks in Kotlin.
 
 KloudFormation can be invoked in many ways allowing any project to use it, not just Kotlin projects.
 
@@ -39,7 +39,7 @@ val template = KloudFormationTemplate.create {
 }
 </pre>
 
-Produces
+This is what it Produces
 
 ```yaml
 AWSTemplateFormatVersion: "2010-09-09"

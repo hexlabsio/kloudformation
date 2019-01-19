@@ -47,7 +47,7 @@ You can invoke this method by running the main method in `StackBuilder` as part 
 
 Creating resources is covered in detail in the [Resources](../resources.html) section.
 
-To create a resource simply call the builder function for that resource, for example if in Cloudformation the type is `AWS::SNS::Topic` then the function will be called `topic` which will exist in the package `io.kloudformation.resource.aws.sns`.
+To create a resource simply call the builder function for that resource, for example if in CloudFormation the type is `AWS::SNS::Topic` then the function will be called `topic` which will exist in the package `io.kloudformation.resource.aws.sns`.
 
 Every resource has a builder function of the same name.
 
@@ -90,13 +90,13 @@ class Stack: StackBuilder {
 
 ## The Value&lt;T&gt; Type
 
-You will spot the Value type all over KloudFormation. Its simply a way for us to represent any of Cloudformation's types.
+You will spot the Value type all over KloudFormation. Its simply a way for us to represent any of CloudFormation's types.
 
 For example, `cidrBlock` is a required property of `vpc`. It looks like this in IntelliJ's Code Completion.
 
 <img style="margin: 1em;" src="value.png"/>
 
-`cidrBlock` is a `Value<String>`. In Cloudformation this property is listed as a String. However you can actually provide anything that will result in a String at deploy time. This includes: a String, a resource reference `Ref`, a join `Fn::Join`, a resource attribute `Fn::GetAtt` or any of the other functions in Cloudformation.
+`cidrBlock` is a `Value<String>`. In CloudFormation this property is listed as a String. However you can actually provide anything that will result in a String at deploy time. This includes: a String, a resource reference `Ref`, a join `Fn::Join`, a resource attribute `Fn::GetAtt` or any of the other functions in CloudFormation.
 
 The `Value<T>` type allows us to do this in KloudFormation.
 

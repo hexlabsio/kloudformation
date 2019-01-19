@@ -78,7 +78,7 @@ This example will set up Maven to run KloudFormation before the package phase. T
     </plugin>
     ```
     
-    c. Invoke StackBuilder to generate the Cloudformation Template while processing test sources
+    c. Invoke StackBuilder to generate the CloudFormation Template while processing test sources
 
     ```xml
     <plugin>
