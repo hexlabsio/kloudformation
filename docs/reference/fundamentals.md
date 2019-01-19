@@ -73,7 +73,7 @@ class Stack: StackBuilder {
 #### Not Required Resource Properties
 {: .no_toc }
 
-Any properties that are not required appear as functions on the builder for that resource. The builder function is passed to you in the last argument. The last argument can be a lambda with { } braces.
+Any properties that are not required appear as functions on the builder for that resource. The builder is passed to you in the last argument. The last argument can be a lambda with { } braces.
 
 <pre class="kotlin" data-highlight-only>
 class Stack: StackBuilder {

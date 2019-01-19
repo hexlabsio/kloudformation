@@ -1,8 +1,8 @@
 ---
 layout: default
-title: Metadata
+title: Resources
 parent: Reference
-nav_order: 1
+nav_order: 5
 ---
 <script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>
 <style>
@@ -20,7 +20,7 @@ blockquote{
 * TOC
 {:toc}
 
-# Metadata
+# Resources
 
 #### Coming Soon
 {: .no_toc }
