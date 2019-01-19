@@ -150,6 +150,8 @@ All of the AWS Pseudo parameters can be found in `io.kloudformation.KloudFormati
 
 For example, in order to output the account id do the following
 
+> Info on Pseudo Parameters from AWS can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/pseudo-parameter-reference.html)
+
 <pre class="kotlin" data-highlight-only>
 outputs("StackAccountId" to Output(awsAccountId))
 </pre>
