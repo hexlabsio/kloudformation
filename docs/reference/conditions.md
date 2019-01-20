@@ -26,7 +26,7 @@ A condition can be used to determine if a resource should be created or not.
 
 > Info on Conditions from AWS can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html)
 
-For example, if you want to only create an instance in the production environment only, do this:
+For example, if you want to create an instance in the production environment only, do this:
 
 <pre class="kotlin" data-highlight-only>
 val environment = parameter&lt;String&gt;("Environment")
