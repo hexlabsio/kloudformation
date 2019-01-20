@@ -22,5 +22,7 @@ blockquote{
 
 # Metadata
 
+## AWS::CloudFormation::Init
+
 #### Coming Soon
 {: .no_toc }

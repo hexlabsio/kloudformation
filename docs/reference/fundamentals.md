@@ -121,3 +121,11 @@ dBCluster {
     port(3306)
 }
 </pre>
+
+## The Value&lt;JsonNode&gt; Type
+
+In some places within KloudFormation you will come across the `Value<JsonNode>` type. This occurs anywhere where JSON is expected.
+
+We have provided a `json()` function that allows you to pass a kotlin `Map<String, Any>` that will evaluate to `Value<JsonNode>`.
+
+> For IAM Policies use the `policyDocument()` function, see [IAM Policies](./iam.html)
