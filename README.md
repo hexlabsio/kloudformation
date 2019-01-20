@@ -21,16 +21,15 @@ KloudFormation can be invoked in many ways allowing any project to use it, not j
  * Up to Date
 
 ## This is what it looks like
-{: .no_toc }
 
-<pre class="kotlin" data-highlight-only>
+```kotlin
 val template = KloudFormationTemplate.create {
     val topic = topic()
     bucket {
         bucketName(topic.TopicName())
     }
 }
-</pre>
+```
 
 This is what it Produces
 
