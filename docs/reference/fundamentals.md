@@ -128,4 +128,4 @@ In some places within KloudFormation you will come across the `Value<JsonNode>` 
 
 We have provided a `json()` function that allows you to pass a kotlin `Map<String, Any>` that will evaluate to `Value<JsonNode>`.
 
-> For IAM Policies use the `policyDocument()` function, see [IAM Policies](./iam.html)
+> For IAM Policies use the `policyDocument()` function, see [IAM Policies](./iamPolicies.html)
