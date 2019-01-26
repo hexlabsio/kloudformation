@@ -22,5 +22,34 @@ blockquote{
 
 # Outputs
 
-#### Coming Soon
-{: .no_toc }
+Outputs can be added to allow importing into another stack.
+
+> Info on Outputs from AWS can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/outputs-section-structure.html)
+
+Outputs can be added by calling the `outputs` function.
+
+<pre class="kotlin" data-highlight-only>
+outputs(
+    "StackVPC" to Output(
+            value = vpc.ref(),
+            description = "The ID of the VPC",
+            export = Output.Export(awsStackName + "-VPCID")
+    )
+)
+</pre>
+
+Produces
+
+```yaml
+Outputs:
+  StackVPC:
+    Value:
+      Ref: "VPC"
+    Description: "The ID of the VPC"
+    Export:
+      Name:
+        Fn::Join:
+        - ""
+        - - Ref: "AWS::StackName"
+          - "-VPCID"
+```
