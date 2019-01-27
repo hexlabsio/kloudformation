@@ -32,7 +32,7 @@ blockquote{
 |Fn::Join|Join(splitter, listOf(a,b,c))|resource.ref() + "string"|[Join](./join.html)|
 |Fn::Sub|Sub(subString, mapOf(variables))||[Sub](./sub.html)|
 |Fn::Base64|FnBase64(+"string")||[Base64](./base64.html)|
-|Fn::Cidr|||[Cidr](./cidr.html)|
+|Fn::Cidr|Cidr(block, count, sizeMask)||[Cidr](./cidr.html)|
 |Fn::FindInMap|||[FindInMap](./findInMap.html)|
 |Fn::GetAZs|||[GetAZs](./getAzs.html)|
 |Fn::ImportValue|||[ImportValue](./importValue.html)|
