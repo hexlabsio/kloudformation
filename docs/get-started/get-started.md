@@ -58,3 +58,11 @@ Resources:
 ## Get Started
 
 Any project can use KloudFormation. To get the best experience, it is recommended to use an IDE with code completion like IntelliJ IDEA
+
+For Reference Material: See [Reference](../reference/reference.html)
+
+To Invert a CloudFormation Template into Kloudformation: See [Inverting CloudFormation](../inversion)
+
+For Advanced Material like Templatisation of KloudFormation: See [Advanced](../advanced/advanced.html)
+
+For getting started with KloudFormation and your particular build tool: See links below

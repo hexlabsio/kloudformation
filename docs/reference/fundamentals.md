@@ -90,7 +90,7 @@ class Stack: StackBuilder {
 
 ## The Value&lt;T&gt; Type
 
-You will spot the Value type all over KloudFormation. Its simply a way for us to represent any of CloudFormation's types.
+You will spot the Value type all over KloudFormation. It's simply a way for us to represent any of CloudFormation's types.
 
 For example, `cidrBlock` is a required property of `vpc`. It looks like this in IntelliJ's Code Completion.
 

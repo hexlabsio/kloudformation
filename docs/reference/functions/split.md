@@ -23,18 +23,15 @@ blockquote{
 
 # Split
 
-#### COMING SOON
-{:.no_toc}
+The `Fn::Split` function in CloudFormation allows a string value to be split by a separator. This can be used in conjunction with Select to pick one of the parts.
+
+> Info on `Fn::Split` from AWS can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-split.html)
+
+In KloudFormation you can use the Split class:
 
 <pre class="kotlin" data-highlight-only>
-
+Select(+"2", Split(",", +"A, B, C"))
 </pre>
-
-Produces
-
-```yaml
-
-```
 
 
 
