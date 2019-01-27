@@ -36,5 +36,5 @@ blockquote{
 |Fn::FindInMap|FindInMap(map, top, second)||[FindInMap](./findInMap.html)|
 |Fn::GetAZs|GetAZs(awsRegion)||[GetAZs](./getAzs.html)|
 |Fn::ImportValue|ImportValue(exportedName)||[ImportValue](./importValue.html)|
-|Fn::Select|||[Select](./select.html)|
-|Fn::Split|||[Split](./split.html)|
+|Fn::Select|Select(index, fromItems)||[Select](./select.html)|
+|Fn::Split|Split(splitter, string)||[Split](./split.html)|
