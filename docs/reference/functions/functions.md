@@ -33,8 +33,8 @@ blockquote{
 |Fn::Sub|Sub(subString, mapOf(variables))||[Sub](./sub.html)|
 |Fn::Base64|FnBase64(+"string")||[Base64](./base64.html)|
 |Fn::Cidr|Cidr(block, count, sizeMask)||[Cidr](./cidr.html)|
-|Fn::FindInMap|||[FindInMap](./findInMap.html)|
-|Fn::GetAZs|||[GetAZs](./getAzs.html)|
-|Fn::ImportValue|||[ImportValue](./importValue.html)|
+|Fn::FindInMap|FindInMap(map, top, second)||[FindInMap](./findInMap.html)|
+|Fn::GetAZs|GetAZs(awsRegion)||[GetAZs](./getAzs.html)|
+|Fn::ImportValue|ImportValue(exportedName)||[ImportValue](./importValue.html)|
 |Fn::Select|||[Select](./select.html)|
 |Fn::Split|||[Split](./split.html)|

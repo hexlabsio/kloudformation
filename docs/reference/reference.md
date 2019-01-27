@@ -32,7 +32,7 @@ Here is a list of equivalents and where to find each part in the reference
 |Resources|io.kloudformation.resource.*|[Resources](./resources.html)|
 |Outputs|outputs()|[Outputs](./outputs.html)|
 
-A list of Intrinsic Function like `Ref` and `Fn::Join` can be found [here](./functions/functions.html)
+A list of Intrinsic Function like `Ref` and `Fn::Join` can be found under [Intrinsic Functions](./functions/functions.html)
 
 
 
