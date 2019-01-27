@@ -23,18 +23,15 @@ blockquote{
 
 # Base64
 
-#### COMING SOON
-{:.no_toc}
+Creates a Base64 encoded representation of whatever is passed to it.
+
+Info on `Fn::Base64` from AWS can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-base64.html)
+
+In KloudFormation you can use the `FnBase64` function
 
 <pre class="kotlin" data-highlight-only>
-
+FnBase64(someString.ref())
 </pre>
-
-Produces
-
-```yaml
-
-```
 
 
 

@@ -23,17 +23,35 @@ blockquote{
 
 # Sub
 
-#### COMING SOON
-{:.no_toc}
+In CloudFormation `Fn::Sub` is used to substitute variables into a template string.
+
+> Info on `Fn::Sub` from AWS can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-sub.html)
+
+In KloudFormation you need to create an instance of `Sub`.
+
+> For KloudFormation, it is recommended to use the simpler [Join](./join.html)
 
 <pre class="kotlin" data-highlight-only>
-
+val rootDomainName = parameter&lt;String&gt;("RootDomainName")
+outputs(
+        "Domain" to Output(Sub("www.${'$'}{Domain}", mapOf("Domain" to rootDomainName.ref())))
+)
 </pre>
 
 Produces
 
 ```yaml
-
+Parameters:
+  RootDomainName:
+    Type: "String"
+Resources: {}
+Outputs:
+  Domain:
+    Value:
+      Fn::Sub:
+      - "www.${Domain}"
+      - Domain:
+          Ref: "RootDomainName"
 ```
 
 
