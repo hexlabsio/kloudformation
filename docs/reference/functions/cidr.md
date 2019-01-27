@@ -23,18 +23,16 @@ blockquote{
 
 # Cidr
 
-#### COMING SOON
-{:.no_toc}
+The `Fn::Cidr` function in CloudFormation takes a Cidr block and splits it into smaller chunks. The result is a list of Cidr Blocks
+
+> Info on `Fn::Cidr` from CloudFormation can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-cidr.html)
+
+This example create 6 CIDRs with a subnet mask /27 from a CIDR with a mask of /24.
 
 <pre class="kotlin" data-highlight-only>
-
+Cidr(+"192.168.0.0/24", +"6", +"5")
 </pre>
 
-Produces
-
-```yaml
-
-```
 
 
 
