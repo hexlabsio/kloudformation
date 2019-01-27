@@ -3,6 +3,7 @@ import groovy.util.Node
 import groovy.util.NodeList
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.api.tasks.bundling.Jar
+import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 import java.time.OffsetDateTime
@@ -22,6 +23,7 @@ val kotlinVersion = "1.3.11"
 val jacksonVersion = "2.9.8"
 val kotlinpoetVersion = "1.0.1"
 val junitVersion = "5.0.0"
+val jsoupVersion = "1.11.3"
 val kloudformationVersion = "0.1.51"
 
 val artifactId = "kloudformation"
@@ -42,11 +44,11 @@ repositories {
 }
 
 dependencies {
-    api(group = "io.kloudformation", name = "kloudformation-specification-generator", version = kloudformationVersion)
     implementation(group = "com.fasterxml.jackson.core", name = "jackson-databind", version = jacksonVersion)
     implementation(group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version = jacksonVersion)
     implementation(group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version = jacksonVersion)
     implementation(group = "com.squareup", name = "kotlinpoet", version = kotlinpoetVersion)
+    implementation(group = "org.jsoup", name = "jsoup", version = jsoupVersion)
 
     testImplementation(group = "org.jetbrains.kotlin", name = "kotlin-test-junit5", version = kotlinVersion)
     testImplementation(group = "org.junit.jupiter", name = "junit-jupiter-api", version = junitVersion)
@@ -54,6 +56,13 @@ dependencies {
 }
 
 sourceSets {
+    create("specificationGenerator") {
+        java {
+            srcDirs("src/main/kotlin")
+            compileClasspath = sourceSets["main"].compileClasspath
+            runtimeClasspath = sourceSets["main"].runtimeClasspath
+        }
+    }
     main {
         java {
             srcDirs("src/main/kotlin", "build/generated")
@@ -61,15 +70,16 @@ sourceSets {
     }
 }
 
-val generateSource by tasks.register<JavaExec>("generateSource") {
+val generateSpecificationSource by tasks.register<JavaExec>("generateSpecificationSource") {
+    dependsOn("compileSpecificationGeneratorKotlin")
     doFirst {
         main = "io.kloudformation.specification.SpecificationGeneratorKt"
-        classpath = sourceSets["main"].runtimeClasspath
+        classpath = sourceSets["main"].runtimeClasspath + sourceSets["specificationGenerator"].output
     }
 }
 
 val compileKotlin by tasks.getting(KotlinCompile::class) {
-    dependsOn(generateSource)
+    dependsOn(generateSpecificationSource)
     kotlinOptions.jvmTarget = "1.8"
 }
 
