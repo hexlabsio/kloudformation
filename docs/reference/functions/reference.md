@@ -25,6 +25,8 @@ blockquote{
 
 All resources and parameters can be referenced by calling the `ref()` function. 
 
+> Info on Ref from AWS can be found [here](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/intrinsic-function-reference-ref.html)
+
 <pre class="kotlin" data-highlight-only>
 val instance = instance()
 eIP { 
@@ -45,7 +47,7 @@ Resources:
         Ref: "Instance"
 ```
 
-You can also build an instance of `Reference` passing the logical name of the resource.
+You can also build an instance of `Reference` by passing the logical name of the resource.
 
 <pre class="kotlin" data-highlight-only>
 val instance = instance()

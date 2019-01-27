@@ -30,8 +30,8 @@ blockquote{
 |Ref|Reference(name)|resource.ref()|[Ref](./reference.html)|
 |Fn::GetAtt|GetAtt(resource, attribute)|resource.&lt;Attribute Name&gt;()|[GetAtt](./attributes.html)|
 |Fn::Join|Join(splitter, listOf(a,b,c))|resource.ref() + "string"|[Join](./join.html)|
-|Fn::Sub|Sub("subString", mapOf(variables))||[Sub](./sub.html)|
-|Fn::Base64|||[Base64](./base64.html)|
+|Fn::Sub|Sub(subString, mapOf(variables))||[Sub](./sub.html)|
+|Fn::Base64|FnBase64(+"string")||[Base64](./base64.html)|
 |Fn::Cidr|||[Cidr](./cidr.html)|
 |Fn::FindInMap|||[FindInMap](./findInMap.html)|
 |Fn::GetAZs|||[GetAZs](./getAzs.html)|
