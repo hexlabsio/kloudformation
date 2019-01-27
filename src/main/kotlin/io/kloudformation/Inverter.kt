@@ -9,31 +9,50 @@ import com.fasterxml.jackson.databind.module.SimpleModule
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import com.squareup.kotlinpoet.*
-import io.kloudformation.function.*
+import com.squareup.kotlinpoet.ClassName
+import com.squareup.kotlinpoet.CodeBlock
+import com.squareup.kotlinpoet.FileSpec
+import com.squareup.kotlinpoet.FunSpec
 import io.kloudformation.model.KloudFormationTemplate
 import io.kloudformation.model.Output
 import io.kloudformation.specification.SpecificationPoet
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.AbstractConstruct
 import org.yaml.snakeyaml.constructor.Constructor
-import org.yaml.snakeyaml.nodes.*
 import java.io.File
 import java.lang.IllegalArgumentException
 import com.squareup.kotlinpoet.ParameterizedTypeName.Companion.parameterizedBy
+import com.squareup.kotlinpoet.TypeSpec
+import com.squareup.kotlinpoet.asClassName
+import io.kloudformation.function.Att
+import io.kloudformation.function.Condition
+import io.kloudformation.function.FindInMap
+import io.kloudformation.function.FnBase64
+import io.kloudformation.function.GetAZs
+import io.kloudformation.function.If
+import io.kloudformation.function.ImportValue
+import io.kloudformation.function.Join
+import io.kloudformation.function.Reference
+import io.kloudformation.function.Select
+import io.kloudformation.function.Split
+import io.kloudformation.function.Sub
+import org.yaml.snakeyaml.nodes.MappingNode
+import org.yaml.snakeyaml.nodes.Node
+import org.yaml.snakeyaml.nodes.ScalarNode
+import org.yaml.snakeyaml.nodes.SequenceNode
+import org.yaml.snakeyaml.nodes.Tag
 
-fun main(args: Array<String>){
+fun main(args: Array<String>) {
     try {
     val fileText = File(args[0]).readText()
     val standard = mapToStandard(fileText)
         Inverter.invert(standard).writeTo(File(args[1]))
-    }
-    catch(e: Exception){
-        if(e.message != null) error(e.message.toString()) else e.printStackTrace()
+    } catch (e: Exception) {
+        if (e.message != null) error(e.message.toString()) else e.printStackTrace()
     }
 }
 
-fun mapToStandard(yaml: String) = with(Yaml(AwsConstructor)){dump(load(yaml)).trim() }
+fun mapToStandard(yaml: String) = with(Yaml(AwsConstructor)) { dump(load(yaml)).trim() }
 
 object AwsConstructor : Constructor() {
     private val arrayNodes = listOf("Cidr", "And", "Equals", "If", "Not", "Or", "FindInMap", "Join", "Select", "Split", "Sub")
@@ -43,7 +62,7 @@ object AwsConstructor : Constructor() {
             ("Ref" to { node -> mapOf("Ref" to node.stringValue()) }) +
             ("GetAtt" to { node -> mapOf("Fn::GetAtt" to node.attributeValue()) })
 
-    private fun Node.attributeValue() = if(this is ScalarNode){
+    private fun Node.attributeValue() = if (this is ScalarNode) {
         val firstComponent = this.value.substringBefore(".")
         val otherComponents = this.value.substringAfter(".")
         listOf(firstComponent, otherComponents)
@@ -94,7 +113,6 @@ object Inverter {
         }
     }
 
-
     private const val kPackage = "io.kloudformation"
     private const val className = "MyStack"
     private const val functionName = "stack"
@@ -141,21 +159,21 @@ object Inverter {
             asSequence().toList().accumulate(start, end, separator, firstIncluded, conversion)
 
     private fun <S> List<S>.accumulate(
-            start: String = "",
-            end: String = "",
-            separator: String = ", ",
-            firstIncluded: Boolean = false,
-            conversion: (S) -> String = { "$it" }
+        start: String = "",
+        end: String = "",
+        separator: String = ", ",
+        firstIncluded: Boolean = false,
+        conversion: (S) -> String = { "$it" }
     ): String = foldIndexed(start) { index, acc, item ->
         conversion(item).let { text -> "$acc${if ((index > 0 || firstIncluded) && text.isNotEmpty() && acc.isNotEmpty()) separator else ""}$text" }
     } + end
 
     class StackInverter(
-            private val staticImports: MutableList<Pair<String, String>> = mutableListOf(),
-            private val parameters: MutableMap<String, JsonNode> = mutableMapOf(),
-            private val conditions: MutableMap<String, JsonNode> = mutableMapOf(),
-            private val mappings: MutableMap<String, JsonNode> = mutableMapOf(),
-            private val resources: MutableMap<String, JsonNode> = mutableMapOf()
+        private val staticImports: MutableList<Pair<String, String>> = mutableListOf(),
+        private val parameters: MutableMap<String, JsonNode> = mutableMapOf(),
+        private val conditions: MutableMap<String, JsonNode> = mutableMapOf(),
+        private val mappings: MutableMap<String, JsonNode> = mutableMapOf(),
+        private val resources: MutableMap<String, JsonNode> = mutableMapOf()
     ) : StdDeserializer<FileSpec>(FileSpec::class.java) {
 
         private fun <T> Map<String, T>.similar(key: String): T? = keys.find { it.equals(key, true) }?.let { this[it] }
@@ -335,7 +353,7 @@ object Inverter {
         private fun CodeBuilder.equalsFrom(node: JsonNode): String {
             val (a, b) = node.elementsAsList()
             staticImports += "$kPackage.function" to "eq"
-            return "(${valueString(a)} eq ${valueString(b)})" //TODO Check that value string is ok here, can by anything
+            return "(${valueString(a)} eq ${valueString(b)})" // TODO Check that value string is ok here, can by anything
         }
 
         private fun CodeBuilder.notFrom(node: JsonNode): String {
@@ -494,7 +512,6 @@ object Inverter {
         }
 
         private fun isValueJsonNode(expectedType: ResourceTypeInfo) = expectedType.valueType && expectedType.parameterA?.rawType?.contains("JsonNode") == true
-
 
         private fun CodeBuilder.value(node: JsonNode, propertyName: String? = null, expectedTypeInfo: ResourceTypeInfo, explicit: Boolean = false): String {
             return if (expectedTypeInfo.valueType && expectedTypeInfo.parameterA != null) {
@@ -800,9 +817,9 @@ object Inverter {
         private fun classForTemplate(node: JsonNode) = TypeSpec.objectBuilder(className).addFunction(functionForTemplate(node)).build()
 
         data class RefBuilder(
-                val name: String = "",
-                val code: String = "",
-                val refs: MutableList<String> = mutableListOf()
+            val name: String = "",
+            val code: String = "",
+            val refs: MutableList<String> = mutableListOf()
         )
 
         inner class CodeBuilder(val objectList: MutableList<Any> = mutableListOf(), var refBuilder: RefBuilder = RefBuilder()) {
@@ -818,14 +835,16 @@ object Inverter {
                     when {
                         refs.isEmpty() -> true
                         else -> (l intersect refs) == refs
-
                     }
                 }
             }
         }
 
-        private fun dependencyTreeFor(depTree: List<CodeBuilder>, resolvedDeps: List<CodeBuilder> = emptyList(),
-                                      lastResolved: List<CodeBuilder> = emptyList()): Pair<List<CodeBuilder>, List<CodeBuilder>> {
+        private fun dependencyTreeFor(
+            depTree: List<CodeBuilder>,
+            resolvedDeps: List<CodeBuilder> = emptyList(),
+            lastResolved: List<CodeBuilder> = emptyList()
+        ): Pair<List<CodeBuilder>, List<CodeBuilder>> {
             val (resolved, unresolved) = depTree.partition { depsResolved(resolvedDeps.map { it.refBuilder.name })(it) }
             return if (resolved == lastResolved) resolvedDeps to unresolved
             else dependencyTreeFor(unresolved, resolvedDeps + resolved, resolved)
@@ -836,7 +855,7 @@ object Inverter {
             val refCounts = codeBlocks.map { item -> item.refBuilder.name to codeBlocks.count { it.refBuilder.refs.contains(item.refBuilder.name) } }.toMap()
             val (orderedCodeBlocks, errorCodeDeps) = dependencyTreeFor(codeBlocks)
             return CodeBlock.builder().also { builder ->
-                //appending error code deps to be sorted by the compiler for now
+                // appending error code deps to be sorted by the compiler for now
                 (orderedCodeBlocks + errorCodeDeps).forEach { codeBlock ->
                     val code = if (refCounts[codeBlock.refBuilder.name] == 0) codeBlock.refBuilder.code
                     else "val ${codeBlock.refBuilder.name.variableName()} = ${codeBlock.refBuilder.code}"

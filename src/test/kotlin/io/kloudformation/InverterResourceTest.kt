@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class InverterResourceTest{
+class InverterResourceTest {
 
     private val testClass = "Resources"
 

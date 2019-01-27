@@ -1,12 +1,9 @@
 package io.kloudformation
 
-import com.squareup.kotlinpoet.FunSpec
-import io.kloudformation.model.KloudFormationTemplate
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class TemplateTest{
+class TemplateTest {
 
     private val testClass = "CrossTemplate"
 
@@ -24,7 +21,6 @@ class TemplateTest{
         }
     }
 
-    //@Test
+    // @Test
     fun `should set reference variables of parameters resources and outputs`() = compare(templateFrom("crossTemplateReferences.json"), "crossTemplateReferences")
-
 }

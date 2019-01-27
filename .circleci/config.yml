@@ -3,33 +3,17 @@ jobs:
   build:
     working_directory: ~/circleci-kloudformation-generator
     docker:
-    - image: circleci/openjdk:8-jdk-browsers
+      - image: circleci/openjdk:8-jdk-browsers
     steps:
-    - checkout
-    - run: cp pom.xml pomCopy.xml
-    - restore_cache:
-        keys:
-        - maven-{{ checksum "pomCopy.xml" }}
-    - run:
-        name: Update Build Version
-        command:  mvn versions:set -DnewVersion=0.1.$CIRCLE_BUILD_NUM
-    - run:
-        name: Maven Test Package and Deploy
-        command: MAVEN_OPTS="-Dorg.slf4j.simpleLogger.log.org.apache.maven.cli.transfer.Slf4jMavenTransferListener=warn" && mvn -s settings.xml -B deploy
-    - run:
-        name: Save test results
-        command: |
-          mkdir -p junit
-          find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ./junit/ \;
-          ls -ltr ./junit
-        when: always
-    - store_test_results:
-        path: junit
-    - store_artifacts:
-        path: junit
-    - store_artifacts:
-        path: pom.xml
-    - save_cache:
-        paths:
-        - ~/.m2
-        key: maven-{{ checksum "pomCopy.xml" }}
+      - checkout
+      - restore_cache:
+          keys:
+            - gradle-{{ checksum "build.gradle.kts" }}
+      - run: ./gradlew clean build -DBUILD_NUM=$CIRCLE_BUILD_NUM
+      - run: ./gradlew bintrayUpload -DBUILD_NUM=$CIRCLE_BUILD_NUM -DBINTRAY_KEY=$BINTRAY_KEY
+      - store_artifacts:
+          path: build/libs
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: gradle-{{ checksum "build.gradle.kts" }}
