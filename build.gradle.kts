@@ -97,12 +97,9 @@ val sourcesJar by tasks.creating(Jar::class) {
     from(sourceSets["main"].allSource)
 }
 
-val uberJar by tasks.creating(ShadowJar::class) {
+val shadowJar by tasks.getting(ShadowJar::class) {
     classifier = "uber"
-    baseName = project.name + "all"
 }
-
-tasks["jar"].dependsOn(uberJar)
 
 bintray {
     user = "hexlabs-builder"
@@ -128,8 +125,8 @@ publishing {
         register("mavenJava", MavenPublication::class) {
             from(components["java"])
             artifactId = artifactId
+            artifact(shadowJar)
             artifact(sourcesJar)
-            artifact(uberJar)
             pom.withXml {
                 val dependencies = (asNode()["dependencies"] as NodeList)
                 configurations.compile.allDependencies.forEach {
