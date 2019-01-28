@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import com.jfrog.bintray.gradle.BintrayExtension
 import groovy.util.Node
 import groovy.util.NodeList
@@ -35,6 +36,7 @@ plugins {
     id("org.jetbrains.kotlin.jvm") version "1.3.11"
     id("org.jlleitschuh.gradle.ktlint") version "6.3.1"
     id("com.jfrog.bintray") version "1.8.4"
+    id("com.github.johnrengelman.shadow") version "4.0.4"
     `maven-publish`
 }
 
@@ -90,10 +92,17 @@ val test by tasks.existing(Test::class) {
     }
 }
 
-val sourcesJar by tasks.registering(Jar::class) {
+val sourcesJar by tasks.creating(Jar::class) {
     classifier = "sources"
     from(sourceSets["main"].allSource)
 }
+
+val uberJar by tasks.creating(ShadowJar::class) {
+    classifier = "uber"
+    baseName = project.name + "all"
+}
+
+tasks["jar"].dependsOn(uberJar)
 
 bintray {
     user = "hexlabs-builder"
@@ -119,7 +128,8 @@ publishing {
         register("mavenJava", MavenPublication::class) {
             from(components["java"])
             artifactId = artifactId
-            artifact(sourcesJar.get())
+            artifact(sourcesJar)
+            artifact(uberJar)
             pom.withXml {
                 val dependencies = (asNode()["dependencies"] as NodeList)
                 configurations.compile.allDependencies.forEach {
