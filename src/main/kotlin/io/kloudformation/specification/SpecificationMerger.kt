@@ -1,10 +1,9 @@
 package io.kloudformation.specification
 
-
 object SpecificationMerger {
     private fun PropertyInfo.merge(b: PropertyInfo) = copy(properties = properties.merge(b.properties))
     private fun <T> Map<String, T>?.merge(b: Map<String, T>?, mergeValue: T.(T) -> T = { this }): Map<String, T>? {
-        return when{
+        return when {
             this == null -> b
             b == null -> this
             else -> {

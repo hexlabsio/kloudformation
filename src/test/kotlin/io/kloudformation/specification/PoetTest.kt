@@ -7,7 +7,7 @@ import kotlin.test.expect
 
 class PoetTest {
     @Test
-    fun `should generate file with a type and single primitive property`(){
+    fun `should generate file with a type and single primitive property`() {
         val spec = Specification(
                 resourceSpecificationVersion = "2.23.0",
                 propertyTypes = mapOf(
@@ -25,13 +25,13 @@ class PoetTest {
                 resourceTypes = emptyMap()
         )
         val files = SpecificationPoet.generateSpecs(spec)
-        expect(1){ files.size }
+        expect(1) { files.size }
         with(files.first()) {
             expect(2) { members.size }
-            with(members[1] as TypeSpec){
+            with(members[1] as TypeSpec) {
                 expect("EbsBlockDeviceConfig") { name }
                 expect(1) { propertySpecs.size }
-                with(propertySpecs.first()){
+                with(propertySpecs.first()) {
                     expect("volumeSpecification") { name }
                     expect("${Value::class ofType String::class}?") { type.toString() }
                 }
@@ -40,7 +40,7 @@ class PoetTest {
     }
 
     @Test
-    fun `should generate with correct proxy types`(){
+    fun `should generate with correct proxy types`() {
         val spec = Specification(
                 resourceSpecificationVersion = "2.23.0",
                 propertyTypes = mapOf(
@@ -95,10 +95,10 @@ class PoetTest {
                 resourceTypes = emptyMap()
         )
         val files = SpecificationPoet.generateSpecs(spec)
-        expect(2){ files.size }
+        expect(2) { files.size }
         with(files.first()) {
             expect(2) { members.size }
-            with(members[1] as TypeSpec){
+            with(members[1] as TypeSpec) {
                 expect("WebhookFilter") { name }
             }
         }

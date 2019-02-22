@@ -63,17 +63,17 @@ object SpecificationPoet {
     private data class PropertyTypeInfo(val name: String, val typeName: TypeName)
 
     private data class TypeMappings(
-            val properties: Map<String, PropertyInfo>,
-            val resources: Map<String, PropertyInfo>,
-            val types: Map<String, PropertyInfo>,
-            val proxyTypes: Map<String, TypeName>
-    ){
+        val properties: Map<String, PropertyInfo>,
+        val resources: Map<String, PropertyInfo>,
+        val types: Map<String, PropertyInfo>,
+        val proxyTypes: Map<String, TypeName>
+    ) {
         companion object {
             fun from(specification: Specification): TypeMappings {
                 val proxyTypes = specification.propertyTypes.filter { it.value.properties == null }.toMap()
                 val propertyTypes = specification.propertyTypes.filter { it.value.properties != null }.toMap()
                 val types = (propertyTypes + specification.resourceTypes)
-                val proxyMappings = proxyTypes.map { (key, info) -> key to getType(types.keys, emptyMap(),key,info.primitiveType,info.primitiveItemType, info.itemType, info.type) }.toMap()
+                val proxyMappings = proxyTypes.map { (key, info) -> key to getType(types.keys, emptyMap(), key, info.primitiveType, info.primitiveItemType, info.itemType, info.type) }.toMap()
                 return TypeMappings(propertyTypes, specification.resourceTypes, types, proxyMappings)
             }
         }
@@ -148,7 +148,7 @@ object SpecificationPoet {
         val typeMappings = TypeMappings.from(specification)
         return jacksonObjectMapper().writeValueAsString((typeMappings.properties.map {
             it.key to infoFrom(typeMappings.types.keys, typeMappings.proxyTypes, false, it.key, it.value)
-        } + typeMappings.resources.map{ it.key to infoFrom(typeMappings.types.keys, typeMappings.proxyTypes, true, it.key, it.value) }).toMap())
+        } + typeMappings.resources.map { it.key to infoFrom(typeMappings.types.keys, typeMappings.proxyTypes, true, it.key, it.value) }).toMap())
     }
 
     private fun buildFile(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
@@ -235,12 +235,11 @@ object SpecificationPoet {
                                 if (it.value.itemType == null && (it.value.primitiveType != null || it.value.primitiveItemType != null))
                                     primitiveSetterFunction(it.key.decapitalize(), it.value, getType(types, proxies, typeName, it.value, wrapped = false))
                                 else null,
-                                if (it.value.primitiveType == null && it.value.primitiveItemType == null && it.value.itemType == null && it.value.type != null){
-                                    val proxy = findProxy(proxies,typeName, it.value.type!!)
-                                    if(proxy != null) primitiveSetterFunction(it.key.decapitalize(), it.value, proxy)
-                                    else typeSetterFunction(it.key, it.key, typeName, typeMappings)
-                                }
-                                else null,
+                                if (it.value.primitiveType == null && it.value.primitiveItemType == null && it.value.itemType == null && it.value.type != null) {
+                                    val proxy = findProxy(proxies, typeName, it.value.type!!)
+                                    if (proxy == null) typeSetterFunction(it.key, it.key, typeName, typeMappings)
+                                    else null
+                                } else null,
                                 FunSpec.builder(it.key.decapitalize())
                                         .addParameter(it.key.decapitalize(), getType(types, proxies, typeName, it.value))
                                         .addCode("return also·{ it.${it.key.decapitalize()}·=·${it.key.decapitalize()} }\n")
