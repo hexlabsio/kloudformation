@@ -95,16 +95,11 @@ class PoetTest {
                 resourceTypes = emptyMap()
         )
         val files = SpecificationPoet.generateSpecs(spec)
-        expect(1){ files.size }
+        expect(2){ files.size }
         with(files.first()) {
             expect(2) { members.size }
             with(members[1] as TypeSpec){
-                expect("EbsBlockDeviceConfig") { name }
-                expect(1) { propertySpecs.size }
-                with(propertySpecs.first()){
-                    expect("volumeSpecification") { name }
-                    expect("${Value::class ofType String::class}?") { type.toString() }
-                }
+                expect("WebhookFilter") { name }
             }
         }
     }
