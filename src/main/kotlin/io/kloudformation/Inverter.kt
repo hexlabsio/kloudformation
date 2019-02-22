@@ -44,11 +44,12 @@ import org.yaml.snakeyaml.nodes.Tag
 
 fun main(args: Array<String>) {
     try {
-    val fileText = File(args[0]).readText()
+    val fileText = AwsConstructor::class.java.classLoader.getResource("test.json").readText()
     val standard = mapToStandard(fileText)
-        Inverter.invert(standard).writeTo(File(args[1]))
+        Inverter.invert(standard).writeTo(File("/Users/chrisbarbour/kloudformation/kloudformation-specification/build/generated"))
     } catch (e: Exception) {
-        if (e.message != null) error(e.message.toString()) else e.printStackTrace()
+        e.printStackTrace()
+        if (e.message != null) error(e.message.toString())
     }
 }
 

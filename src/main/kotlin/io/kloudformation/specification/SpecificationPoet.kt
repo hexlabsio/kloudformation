@@ -62,12 +62,29 @@ object SpecificationPoet {
     private data class TypeInfo(val awsTypeName: String, val canonicalName: String, val properties: List<PropertyTypeInfo>)
     private data class PropertyTypeInfo(val name: String, val typeName: TypeName)
 
+    private data class TypeMappings(
+            val properties: Map<String, PropertyInfo>,
+            val resources: Map<String, PropertyInfo>,
+            val types: Map<String, PropertyInfo>,
+            val proxyTypes: Map<String, TypeName>
+    ){
+        companion object {
+            fun from(specification: Specification): TypeMappings {
+                val proxyTypes = specification.propertyTypes.filter { it.value.properties == null }.toMap()
+                val propertyTypes = specification.propertyTypes.filter { it.value.properties != null }.toMap()
+                val types = (propertyTypes + specification.resourceTypes)
+                val proxyMappings = proxyTypes.map { (key, info) -> key to getType(types.keys, emptyMap(),key,info.primitiveType,info.primitiveItemType, info.itemType, info.type) }.toMap()
+                return TypeMappings(propertyTypes, specification.resourceTypes, types, proxyMappings)
+            }
+        }
+    }
+
     fun generateSpecs(specification: Specification): List<FileSpec> {
-        val types = (specification.propertyTypes + specification.resourceTypes)
-        val files = (specification.propertyTypes
-                .map { it.key to buildFile(types.keys, false, it.key, it.value) } +
+        val typeMappings = TypeMappings.from(specification)
+        val files = (typeMappings.properties
+                .map { it.key to buildFile(typeMappings.types.keys, typeMappings.proxyTypes, false, it.key, it.value) } +
                 specification.resourceTypes
-                        .map { it.key to buildFile(types.keys, true, it.key, it.value) }).toMap()
+                        .map { it.key to buildFile(typeMappings.types.keys, typeMappings.proxyTypes, true, it.key, it.value) }).toMap()
 
         val fieldMappings = files.map {
             TypeInfo(
@@ -81,7 +98,7 @@ object SpecificationPoet {
         return files.map { file ->
             val type = file.value.members.first { it is TypeSpec } as TypeSpec
             val propertyType = file.key
-            val propertyInfo = types[propertyType]
+            val propertyInfo = typeMappings.types[propertyType]
             val isResource = specification.resourceTypes.containsKey(propertyType)
             FileSpec.builder(file.value.packageName, file.value.name)
                     .also { newFile ->
@@ -90,8 +107,8 @@ object SpecificationPoet {
                     .addType(
                             type.toBuilder()
                                     .primaryConstructor(type.primaryConstructor)
-                                    .addType(companionObject(types.keys, isResource, propertyType, propertyInfo!!))
-                                    .addType(builderClass((specification.propertyTypes + specification.resourceTypes).keys, isResource, propertyType, propertyInfo, fieldMappings))
+                                    .addType(companionObject(typeMappings.types.keys, typeMappings.proxyTypes, isResource, propertyType, propertyInfo!!))
+                                    .addType(builderClass(typeMappings.types.keys, typeMappings.proxyTypes, isResource, propertyType, propertyInfo, fieldMappings))
                                     .build()
                     )
                     .build()
@@ -105,16 +122,16 @@ object SpecificationPoet {
 
     data class Info(val type: String, val name: String, val resource: Boolean, val required: Map<String, String>, val notRequired: Map<String, String>)
 
-    private fun infoFrom(types: Set<String>, resource: Boolean, typeName: String, propertyInfo: PropertyInfo): Info {
-        val properties = propertyInfo.properties.run { filter { it.value.required } to filter { !it.value.required } }
+    private fun infoFrom(types: Set<String>, proxies: Map<String, TypeName>, resource: Boolean, typeName: String, propertyInfo: PropertyInfo): Info {
+        val properties = propertyInfo.properties.orEmpty().run { filter { it.value.required } to filter { !it.value.required } }
         return Info(typeName, getClassName(typeName), resource,
-                properties.first.map { it.key.decapitalize() to awsNameFor(getType(types, typeName, it.value).toString()) }.toMap(),
-                properties.second.map { it.key.decapitalize() to awsNameFor(getType(types, typeName, it.value).toString()) }.toMap()
+                properties.first.map { it.key.decapitalize() to awsNameFor(getType(types, proxies, typeName, it.value).toString()) }.toMap(),
+                properties.second.map { it.key.decapitalize() to awsNameFor(getType(types, proxies, typeName, it.value).toString()) }.toMap()
         )
     }
 
-    private fun awsNameFor(type: String): String = if (type.startsWith("io.kloudformation.property.")) {
-        val parts = type.substringAfter("io.kloudformation.property.")
+    private fun awsNameFor(type: String): String = if (type.startsWith("io.kloudformation.property.aws")) {
+        val parts = type.substringAfter("io.kloudformation.property.aws")
         val firstPart = parts.substringBefore(".")
         if (firstPart == "Tag") "Tag" else {
             val rest = parts.substringAfter("$firstPart.")
@@ -127,21 +144,22 @@ object SpecificationPoet {
         "List<${awsNameFor(type.substringAfter("kotlin.collections.List<").substringBeforeLast(">"))}>"
     else type
 
-    private fun libraryInfoFrom(specification: Specification) = (specification.propertyTypes + specification.resourceTypes).let { types ->
-        jacksonObjectMapper().writeValueAsString((specification.propertyTypes.map { it.key to infoFrom(types.keys, false, it.key, it.value) } +
-                specification.resourceTypes.map { it.key to infoFrom(types.keys, true, it.key, it.value) }).toMap()
-        )
+    private fun libraryInfoFrom(specification: Specification): String {
+        val typeMappings = TypeMappings.from(specification)
+        return jacksonObjectMapper().writeValueAsString((typeMappings.properties.map {
+            it.key to infoFrom(typeMappings.types.keys, typeMappings.proxyTypes, false, it.key, it.value)
+        } + typeMappings.resources.map{ it.key to infoFrom(typeMappings.types.keys, typeMappings.proxyTypes, true, it.key, it.value) }).toMap())
     }
 
-    private fun buildFile(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
+    private fun buildFile(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             FileSpec.builder(getPackageName(isResource, typeName), getClassName(typeName))
-                    .addType(buildType(types, isResource, typeName, propertyInfo))
-                    .addFunction(builderFunction(types, isResource, typeName, propertyInfo))
+                    .addType(buildType(types, proxies, isResource, typeName, propertyInfo))
+                    .addFunction(builderFunction(types, proxies, isResource, typeName, propertyInfo))
                     .build()
 
     private fun builderClassNameFrom(type: String) = ClassName.bestGuess("$type.Builder")
 
-    private fun builderFunction(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = FunSpec.let {
+    private fun builderFunction(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = FunSpec.let {
         val name = getClassName(typeName)
         val packageName = getPackageName(isResource, typeName)
         it.builder(name.decapitalize()).also { func ->
@@ -150,7 +168,7 @@ object SpecificationPoet {
             } else {
                 func.addCode("return builder(%T.create(${paramListFrom(propertyInfo, false)})).build()\n", ClassName.bestGuess("$packageName.$name"))
             }
-            propertyInfo.properties.sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, typeName, it.key, it.value)) }
+            propertyInfo.properties.orEmpty().sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, proxies, typeName, it.key, it.value)) }
             if (isResource) func.addParameters(builderFunctionResourceParameters)
             val builderTypeName = builderClassNameFrom("$packageName.$name")
             func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderTypeName, returnType = builderTypeName)).defaultValue("{·this·}").build())
@@ -159,10 +177,10 @@ object SpecificationPoet {
                 .build()
     }
 
-    private fun buildType(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
+    private fun buildType(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) =
             TypeSpec.classBuilder(getClassName(typeName))
-                    .addModifiers(if (!propertyInfo.properties.isEmpty() || isResource) KModifier.DATA else KModifier.PUBLIC)
-                    .primaryConstructor(if (!propertyInfo.properties.isEmpty() || isResource) buildConstructor(types, isResource, typeName, propertyInfo) else null)
+                    .addModifiers(if (!propertyInfo.properties.orEmpty().isEmpty() || isResource) KModifier.DATA else KModifier.PUBLIC)
+                    .primaryConstructor(if (!propertyInfo.properties.orEmpty().isEmpty() || isResource) buildConstructor(types, proxies, isResource, typeName, propertyInfo) else null)
                     .also {
                         if (isResource)
                             it
@@ -170,65 +188,68 @@ object SpecificationPoet {
                                     .addSuperclassConstructorParameter("kloudResourceType·=·%S", typeName)
                                     .addResourceConstructorParameters()
                     }
-                    .addFunctions(functionsFrom(types, typeName, propertyInfo.attributes.orEmpty()))
-                    .addProperties(propertyInfo.properties.sorted().map { buildProperty(types, typeName, it.key, it.value) })
+                    .addFunctions(functionsFrom(types, proxies, typeName, propertyInfo.attributes.orEmpty()))
+                    .addProperties(propertyInfo.properties.orEmpty().sorted().map { buildProperty(types, proxies, typeName, it.key, it.value) })
                     .build()
 
-    private fun buildConstructor(types: Set<String>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
+    private fun buildConstructor(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, classTypeName: String, propertyInfo: PropertyInfo) =
             FunSpec.constructorBuilder()
                     .also { if (isResource) it.addParameter(ParameterSpec.builder(logicalName, String::class, KModifier.OVERRIDE).addAnnotation(JsonIgnore::class).build()) }
-                    .addParameters(propertyInfo.properties.toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildParameter(types, classTypeName, it.key, it.value) })
+                    .addParameters(propertyInfo.properties.orEmpty().toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap().map { buildParameter(types, proxies, classTypeName, it.key, it.value) })
                     .also { if (isResource) it.addResourceConstructorParameters() }
                     .build()
 
-    private fun functionsFrom(types: Set<String>, typeName: String, attributes: Map<String, Attribute>) = attributes.map {
-        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %T(%S))\n", Att::class, getType(types, typeName, it.value, false), Value.Of::class, it.key).build()
+    private fun functionsFrom(types: Set<String>, proxies: Map<String, TypeName>, typeName: String, attributes: Map<String, Attribute>) = attributes.map {
+        FunSpec.builder(escape(it.key)).addCode("return %T<%T>(logicalName, %T(%S))\n", Att::class, getType(types, proxies, typeName, it.value, false), Value.Of::class, it.key).build()
     }
 
     private fun Map<String, Property>.sorted() = toList().sortedWith(compareBy({ !it.second.required }, { it.first })).toMap()
 
-    private fun builderConstructor(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = FunSpec
+    private fun builderConstructor(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = FunSpec
             .constructorBuilder()
             .also { func ->
                 if (isResource) {
                     func.addParameter(ParameterSpec.builder(logicalName, String::class).build())
                 }
-                func.addParameters(propertyInfo.properties.sorted().filter { it.value.required }.map { buildParameter(types, typeName, it.key, it.value) })
+                func.addParameters(propertyInfo.properties.orEmpty().sorted().filter { it.value.required }.map { buildParameter(types, proxies, typeName, it.key, it.value) })
                 if (isResource) func.addResourceParameters()
             }
             .build()
 
-    private fun companionObject(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = TypeSpec.companionObjectBuilder()
-            .addFunction(buildCreateFunction(types, isResource, typeName, propertyInfo))
+    private fun companionObject(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo) = TypeSpec.companionObjectBuilder()
+            .addFunction(buildCreateFunction(types, proxies, isResource, typeName, propertyInfo))
             .build()
 
-    private fun builderClass(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) = TypeSpec.classBuilder("Builder")
-            .primaryConstructor(builderConstructor(types, isResource, typeName, propertyInfo))
+    private fun builderClass(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) = TypeSpec.classBuilder("Builder")
+            .primaryConstructor(builderConstructor(types, proxies, isResource, typeName, propertyInfo))
             .addSuperinterface(KloudResourceBuilder::class)
             .also { if (isResource) it.addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build()) }
-            .addProperties(propertyInfo.properties.sorted().let {
-                it.filter { !it.value.required }.map { buildVarProperty(types, typeName, it.key, it.value) } +
-                        it.filter { it.value.required }.map { buildProperty(types, typeName, it.key, it.value) }
+            .addProperties(propertyInfo.properties.orEmpty().sorted().let {
+                it.filter { !it.value.required }.map { buildVarProperty(types, proxies, typeName, it.key, it.value) } +
+                        it.filter { it.value.required }.map { buildProperty(types, proxies, typeName, it.key, it.value) }
             })
             .also { if (isResource) it.addBuilderResourceProperties() }
             .addFunctions(
-                    propertyInfo.properties.filter { !it.value.required }.flatMap {
+                    propertyInfo.properties.orEmpty().filter { !it.value.required }.flatMap {
                         listOfNotNull(
                                 if (it.value.itemType == null && (it.value.primitiveType != null || it.value.primitiveItemType != null))
-                                    primitiveSetterFunction(it.key.decapitalize(), it.value, getType(types, typeName, it.value, wrapped = false))
+                                    primitiveSetterFunction(it.key.decapitalize(), it.value, getType(types, proxies, typeName, it.value, wrapped = false))
                                 else null,
-                                if (it.value.primitiveType == null && it.value.primitiveItemType == null && it.value.itemType == null && it.value.type != null)
-                                    typeSetterFunction(it.key, it.key, typeName, typeMappings)
+                                if (it.value.primitiveType == null && it.value.primitiveItemType == null && it.value.itemType == null && it.value.type != null){
+                                    val proxy = findProxy(proxies,typeName, it.value.type!!)
+                                    if(proxy != null) primitiveSetterFunction(it.key.decapitalize(), it.value, proxy)
+                                    else typeSetterFunction(it.key, it.key, typeName, typeMappings)
+                                }
                                 else null,
                                 FunSpec.builder(it.key.decapitalize())
-                                        .addParameter(it.key.decapitalize(), getType(types, typeName, it.value))
+                                        .addParameter(it.key.decapitalize(), getType(types, proxies, typeName, it.value))
                                         .addCode("return also·{ it.${it.key.decapitalize()}·=·${it.key.decapitalize()} }\n")
                                         .build()
                         )
                     } + listOf(
                             FunSpec.builder("build")
                                     .also {
-                                        val primitiveProperties = propertyInfo.properties.keys + (if (isResource) setOf(resourceProperties, "dependsOn") else emptySet())
+                                        val primitiveProperties = propertyInfo.properties.orEmpty().keys + (if (isResource) setOf(resourceProperties, "dependsOn") else emptySet())
                                         it.addCode("return ${getClassName(typeName)}( " + primitiveProperties.foldIndexed(if (isResource) logicalName + (if (primitiveProperties.isNotEmpty()) ", " else "") else "") {
                                             index, acc, item -> acc + (if (index != 0)", " else "") + "${item.decapitalize()}·=·${item.decapitalize()}"
                                         } + ")\n")
@@ -240,7 +261,7 @@ object SpecificationPoet {
 
     private fun paramListFrom(propertyInfo: PropertyInfo, isResource: Boolean, addCurrentDependee: Boolean = false, specialLogicalName: String? = null): String {
         val nameList = (if (isResource) listOf(logicalName, dependsOn) else emptyList()) +
-                propertyInfo.properties.sorted().filter { it.value.required }.keys.map { it.decapitalize() } +
+                propertyInfo.properties.orEmpty().sorted().filter { it.value.required }.keys.map { it.decapitalize() } +
                 (if (isResource) listOf(resourceProperties) else emptyList())
         return nameList.foldIndexed("") {
             index, acc, name -> acc + (if (index != 0) ", " else "") + "$name·=·" +
@@ -252,11 +273,11 @@ object SpecificationPoet {
         }
     }
 
-    private fun buildCreateFunction(types: Set<String>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo): FunSpec {
+    private fun buildCreateFunction(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo): FunSpec {
         val funSpec = if (isResource) {
             FunSpec.builder("create").addParameter(logicalName, String::class).addCode("return Builder(${paramListFrom(propertyInfo, true)})\n")
         } else FunSpec.builder("create").addCode("return Builder(${paramListFrom(propertyInfo, false)})\n")
-        propertyInfo.properties.sorted().filter { it.value.required }.forEach { funSpec.addParameter(buildParameter(types, typeName, it.key, it.value)) }
+        propertyInfo.properties.orEmpty().sorted().filter { it.value.required }.forEach { funSpec.addParameter(buildParameter(types, proxies, typeName, it.key, it.value)) }
         if (isResource) funSpec.addResourceParameters()
         return funSpec.build()
     }
@@ -295,25 +316,25 @@ object SpecificationPoet {
                 .build()
     }
 
-    private fun buildProperty(types: Set<String>, classTypeName: String, propertyName: String, property: Property) =
+    private fun buildProperty(types: Set<String>, proxies: Map<String, TypeName>, classTypeName: String, propertyName: String, property: Property) =
             PropertySpec.builder(
                     propertyName.decapitalize(),
-                    if (property.required) getType(types, classTypeName, property).copy(false) else getType(types, classTypeName, property).copy(true))
+                    if (property.required) getType(types, proxies, classTypeName, property).copy(false) else getType(types, proxies, classTypeName, property).copy(true))
                     .initializer(propertyName.decapitalize())
                     .build()
 
-    private fun buildVarProperty(types: Set<String>, classTypeName: String, propertyName: String, property: Property) =
+    private fun buildVarProperty(types: Set<String>, proxies: Map<String, TypeName>, classTypeName: String, propertyName: String, property: Property) =
             PropertySpec.builder(
                     propertyName.decapitalize(),
-                    getType(types, classTypeName, property).copy(true)
+                    getType(types, proxies, classTypeName, property).copy(true)
             ).mutable(true).initializer("null").build()
 
-    private fun buildParameter(types: Set<String>, classTypeName: String, parameterName: String, property: Property) =
+    private fun buildParameter(types: Set<String>, proxies: Map<String, TypeName>, classTypeName: String, parameterName: String, property: Property) =
             if (property.required) ParameterSpec
-                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).copy(false))
+                    .builder(parameterName.decapitalize(), getType(types, proxies, classTypeName, property).copy(false))
                     .build()
             else ParameterSpec
-                    .builder(parameterName.decapitalize(), getType(types, classTypeName, property).copy(true))
+                    .builder(parameterName.decapitalize(), getType(types, proxies, classTypeName, property).copy(true))
                     .defaultValue("null")
                     .build()
 
@@ -331,13 +352,13 @@ object SpecificationPoet {
             if (wrapped) Value::class ofType primitiveTypeName(primitiveType)
             else primitiveTypeName(primitiveType)
 
-    private fun getType(types: Set<String>, classTypeName: String, attribute: Attribute, wrapped: Boolean = true) =
-            getType(types, classTypeName, attribute.primitiveType, attribute.primitiveItemType, null, attribute.type, wrapped)
+    private fun getType(types: Set<String>, proxies: Map<String, TypeName>, classTypeName: String, attribute: Attribute, wrapped: Boolean = true) =
+            getType(types, proxies, classTypeName, attribute.primitiveType, attribute.primitiveItemType, null, attribute.type, wrapped)
 
-    private fun getType(types: Set<String>, classTypeName: String, property: Property, wrapped: Boolean = true) =
-            getType(types, classTypeName, property.primitiveType, property.primitiveItemType, property.itemType, property.type, wrapped)
+    private fun getType(types: Set<String>, proxies: Map<String, TypeName>, classTypeName: String, property: Property, wrapped: Boolean = true) =
+            getType(types, proxies, classTypeName, property.primitiveType, property.primitiveItemType, property.itemType, property.type, wrapped)
 
-    private fun getType(types: Set<String>, classTypeName: String, primitiveType: String?, primitiveItemType: String?, itemType: String? = null, type: String? = null, wrapped: Boolean = true) = when {
+    private fun getType(types: Set<String>, proxies: Map<String, TypeName>, classTypeName: String, primitiveType: String?, primitiveItemType: String?, itemType: String? = null, type: String? = null, wrapped: Boolean = true) = when {
         !primitiveType.isNullOrEmpty() -> {
             if (wrapped) Value::class ofType primitiveTypeName(primitiveType)
             else primitiveTypeName(primitiveType)
@@ -349,14 +370,19 @@ object SpecificationPoet {
                 if (wrapped) Value::class ofType arrayOfValueOfType else arrayOfValueOfType
             }
         }
-        !itemType.isNullOrEmpty() -> List::class ofType ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType)
-        else -> ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, type.toString())) + "." + type)
+        !itemType.isNullOrEmpty() -> {
+            List::class ofType (findProxy(proxies, classTypeName, itemType) ?: ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType))
+        }
+        else -> findProxy(proxies, classTypeName, type.toString()) ?: ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, type.toString())) + "." + type)
     }
 
     private fun getTypeName(types: Set<String>, classTypeName: String, propertyType: String) =
             types.filter { it == propertyType || it.endsWith(".$propertyType") }.let {
                 if (it.size > 1) it.first { it.contains(classTypeName.split("::").last().split(".").first()) } else it.first()
             }
+
+    private fun findProxy(proxies: Map<String, TypeName>, classTypeName: String, propertyType: String) =
+            proxies[classTypeName.substringBeforeLast("::") + "::" + classTypeName.substringAfterLast("::").substringBefore(".") + ".$propertyType"]
 
     private fun escape(name: String) = name.replace(".", "")
 }
