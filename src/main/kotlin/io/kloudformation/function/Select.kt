@@ -10,7 +10,7 @@ import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.Value
 
 @JsonSerialize(using = Select.Serializer::class)
-data class Select<T>(val index: Select.IndexValue<String>, val objects: Select.ObjectValue<List<Select.ObjectValue<T>>>)
+data class Select<T>(val index: Select.IndexValue<String>, val objects: Select.ObjectValue<List<Value<T>>>)
     : Value<T>, Cidr.Value<T>, ImportValue.Value<T>, SplitValue<T>, SubValue, IfValue<T> {
 
     interface IndexValue<T>

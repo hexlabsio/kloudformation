@@ -44,12 +44,11 @@ import org.yaml.snakeyaml.nodes.Tag
 
 fun main(args: Array<String>) {
     try {
-    val fileText = AwsConstructor::class.java.classLoader.getResource("test.json").readText()
-    val standard = mapToStandard(fileText)
-        Inverter.invert(standard).writeTo(File("/Users/chrisbarbour/kloudformation/kloudformation-specification/build/generated"))
+        val fileText = File(args[0]).readText()
+        val standard = mapToStandard(fileText)
+        Inverter.invert(standard).writeTo(File(args[1]))
     } catch (e: Exception) {
-        e.printStackTrace()
-        if (e.message != null) error(e.message.toString())
+        if (e.message != null) error(e.message.toString()) else e.printStackTrace()
     }
 }
 
@@ -105,7 +104,8 @@ object Inverter {
             "\t" to "\\t",
             "\r" to "\\r",
             "\"" to "\\",
-            "$" to "\${'$'}"
+            "$" to "\${'$'}",
+            " " to "·"
     )
 
     fun escape(value: String): String = value.let {
@@ -153,7 +153,7 @@ object Inverter {
         val otherPackages = awsType.substringAfter("::").substringAfter("::").split(".")
         val otherPackagesString = otherPackages.subList(0, otherPackages.size - 1).accumulate(separator = ".") { it.toLowerCase() }
         val tail = if (otherPackagesString.isNotEmpty()) ".$otherPackagesString" else ""
-        return "$kPackage.${if (resource) "resource" else "property"}.$resourcePackage$tail"
+        return "$kPackage.${if (resource) "resource" else "property"}.aws.$resourcePackage$tail"
     }
 
     private fun <A, S> Map<A, S>.accumulate(start: String = "", end: String = "", separator: String = ", ", firstIncluded: Boolean = false, conversion: (Map.Entry<A, S>) -> String) =
@@ -521,9 +521,10 @@ object Inverter {
             } else if (expectedTypeInfo.list) {
                 val start = if (propertyName != null && !expectedTypeInfo.required) "$propertyName(" else ""
                 val end = if (propertyName != null && !expectedTypeInfo.required) ")" else ""
-                (if (node.isArray) node.elementsAsList() else listOf(node)).accumulate("${start}listOf(\n⇥", "⇤)$end", ",\n") { item ->
+                if(node.isArray) node.elementsAsList().accumulate("${start}listOf(\n⇥", "⇤)$end", ",\n") { item ->
                     value(item, expectedTypeInfo.parameterA?.className?.decapitalize(), expectedTypeInfo = expectedTypeInfo.parameterA!!, explicit = explicit)
                 }
+                else rawTypeFrom(node, propertyName, expectedTypeInfo, explicit)
             } else if (expectedTypeInfo.map) {
                 val start = if (propertyName != null && !expectedTypeInfo.required) "$propertyName(" else ""
                 val end = if (propertyName != null && !expectedTypeInfo.required) ")" else ""
@@ -726,7 +727,7 @@ object Inverter {
                     elements.accumulate("listOf(\n⇥", "\n⇤)") { jsonPartFor(it) }
                 }
                 node.isTextual -> {
-                    this + escape(node.asText()); "%S"
+                    this + node.asText(); "%S"
                 }
                 else -> node.asText()
             }
@@ -747,11 +748,19 @@ object Inverter {
                     val fields = listOfNotNull(
                             "logicalName" to "%S",
                             resource["DependsOn"]?.let { "dependsOn" to codeBuilder.dependsOnFor(it) },
-                            resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(escape(it.textValue())) },
-                            resource["Metadata"]?.let { "metadata" to codeBuilder.jsonFor(it) },
-                            resource["CreationPolicy"]?.let { "creationPolicy" to codeBuilder.creationPolicyFor(it) },
-                            resource["UpdatePolicy"]?.let { "updatePolicy" to codeBuilder.updatePolicyFor(it) },
-                            resource["DeletionPolicy"]?.let { "deletionPolicy" to codeBuilder.deletionPolicyFor(it) }
+                            "resourceProperties".let {
+                                val parts = listOfNotNull(
+                                        resource["Condition"]?.let { "condition" to codeBuilder.conditionReferenceFor(escape(it.textValue())) },
+                                        resource["Metadata"]?.let { "metadata" to codeBuilder.jsonFor(it) },
+                                        resource["CreationPolicy"]?.let { "creationPolicy" to codeBuilder.creationPolicyFor(it) },
+                                        resource["UpdatePolicy"]?.let { "updatePolicy" to codeBuilder.updatePolicyFor(it) },
+                                        resource["DeletionPolicy"]?.let { "deletionPolicy" to codeBuilder.deletionPolicyFor(it) }
+                                )
+                                if(parts.isNotEmpty()){
+                                    it to parts.accumulate(start = "ResourceProperties(", end = ")") { (key, value) -> "$key = $value" }
+                                } else null
+                            }
+
                     ).accumulate { (key, value) -> "$key = $value" }
                     val required = typeInfo.required.accumulate("$functionName($fields", ")", firstIncluded = true) { (propertyName, propertyType) ->
                         "$propertyName = " + codeBuilder.createFunctionFrom(resource.properties(), propertyName, propertyType)

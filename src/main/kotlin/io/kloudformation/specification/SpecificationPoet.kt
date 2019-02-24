@@ -131,7 +131,7 @@ object SpecificationPoet {
     }
 
     private fun awsNameFor(type: String): String = if (type.startsWith("io.kloudformation.property.aws")) {
-        val parts = type.substringAfter("io.kloudformation.property.aws")
+        val parts = type.substringAfter("io.kloudformation.property.aws.")
         val firstPart = parts.substringBefore(".")
         if (firstPart == "Tag") "Tag" else {
             val rest = parts.substringAfter("$firstPart.")
