@@ -521,7 +521,7 @@ object Inverter {
             } else if (expectedTypeInfo.list) {
                 val start = if (propertyName != null && !expectedTypeInfo.required) "$propertyName(" else ""
                 val end = if (propertyName != null && !expectedTypeInfo.required) ")" else ""
-                if(node.isArray) node.elementsAsList().accumulate("${start}listOf(\n⇥", "⇤)$end", ",\n") { item ->
+                if (node.isArray) node.elementsAsList().accumulate("${start}listOf(\n⇥", "⇤)$end", ",\n") { item ->
                     value(item, expectedTypeInfo.parameterA?.className?.decapitalize(), expectedTypeInfo = expectedTypeInfo.parameterA!!, explicit = explicit)
                 }
                 else rawTypeFrom(node, propertyName, expectedTypeInfo, explicit)
@@ -756,7 +756,7 @@ object Inverter {
                                         resource["UpdatePolicy"]?.let { "updatePolicy" to codeBuilder.updatePolicyFor(it) },
                                         resource["DeletionPolicy"]?.let { "deletionPolicy" to codeBuilder.deletionPolicyFor(it) }
                                 )
-                                if(parts.isNotEmpty()){
+                                if (parts.isNotEmpty()) {
                                     it to parts.accumulate(start = "ResourceProperties(", end = ")") { (key, value) -> "$key = $value" }
                                 } else null
                             }
