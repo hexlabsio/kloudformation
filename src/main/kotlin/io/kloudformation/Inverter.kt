@@ -844,7 +844,7 @@ object Inverter {
                 with(cb.refBuilder) {
                     when {
                         refs.isEmpty() -> true
-                        else -> (l intersect refs) == refs
+                        else -> (l intersect refs) == refs.toSet()
                     }
                 }
             }
