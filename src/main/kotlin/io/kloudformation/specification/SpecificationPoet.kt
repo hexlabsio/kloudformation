@@ -20,9 +20,6 @@ import io.kloudformation.ResourceProperties
 import io.kloudformation.Value
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
-import io.kloudformation.specification.SpecificationPoet.generateSpecs
-import jdk.internal.instrumentation.TypeMappings
-import jdk.nashorn.internal.objects.NativeArray.forEach
 import java.io.File
 import kotlin.reflect.KClass
 
