@@ -95,13 +95,13 @@ object SpecificationPoet {
                     }
             )
         }
+        println("| CloudFormation | KloudFormation |")
+        println("|---|---|")
         fieldMappings.filter { it.canonicalName.startsWith("io.kloudformation.resource") }.map {
-            it.awsTypeName.split("::").let {
-                it.take(2).joinToString(" ") to it.drop(2).joinToString(" ")
-            }
+                it.awsTypeName.split("::").take(2).joinToString(" ") to (it.awsTypeName to it.canonicalName)
         }.sortedBy { it.first }.groupBy { it.first }.forEach { (group, resources) ->
-            println("$group Resources: ${resources.sortedBy { it.second }.map{ it.second }.joinToString(", ")}")
-            println()
+            println("|**$group**||")
+            resources.sortedBy { it.second.first }.forEach { (_, pair) -> println("| ${pair.first} | ${pair.second} |") }
         }
         return files.map { file ->
             val type = file.value.members.first { it is TypeSpec } as TypeSpec
