@@ -99,8 +99,8 @@ object SpecificationPoet {
             it.awsTypeName.split("::").let {
                 it.take(2).joinToString(" ") to it.drop(2).joinToString(" ")
             }
-        }.sortedBy { it.first }.groupBy{ it.first }.forEach { (group, resources) ->
-            println("${group} Resources: ${resources.sortedBy { it.second }.map{ it.second }.joinToString(", ")}")
+        }.sortedBy { it.first }.groupBy { it.first }.forEach { (group, resources) ->
+            println("$group Resources: ${resources.sortedBy { it.second }.map{ it.second }.joinToString(", ")}")
             println()
         }
         return files.map { file ->
