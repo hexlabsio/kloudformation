@@ -20,6 +20,9 @@ import io.kloudformation.ResourceProperties
 import io.kloudformation.Value
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.specification.SpecificationPoet.generateSpecs
+import jdk.internal.instrumentation.TypeMappings
+import jdk.nashorn.internal.objects.NativeArray.forEach
 import java.io.File
 import kotlin.reflect.KClass
 
@@ -94,6 +97,14 @@ object SpecificationPoet {
                         PropertyTypeInfo(it.name, it.type)
                     }
             )
+        }
+        fieldMappings.filter { it.canonicalName.startsWith("io.kloudformation.resource") }.map {
+            it.awsTypeName.split("::").let {
+                it.take(2).joinToString(" ") to it.drop(2).joinToString(" ")
+            }
+        }.sortedBy { it.first }.groupBy{ it.first }.forEach { (group, resources) ->
+            println("${group} Resources: ${resources.sortedBy { it.second }.map{ it.second }.joinToString(", ")}")
+            println()
         }
         return files.map { file ->
             val type = file.value.members.first { it is TypeSpec } as TypeSpec

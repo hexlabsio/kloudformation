@@ -12,6 +12,12 @@ blockquote{
     padding-left: 3em;
     border-left: 0.5em #f2c152 solid;
 }
+blockquote>blockquote{
+    border: 0;
+    padding-left: 0;
+    color: #a5a5a5;
+    font-size: 0.8em;
+}
 </style>
 
 ## Table of contents
@@ -262,4 +268,92 @@ Resources:
     Type: "Custom::DBInit"
     Properties:
       ServiceToken: "arn:aws::xxxx:xxx"
+```
+
+# Full Resource List
+
+>> Note: All resources are generated and are up to date with Amazon's specifications. If a resource is not listed below it is because this textual list is not generated.
+
+```yaml
+Alexa ASK Resources: Skill
+AWS ApiGateway Resources: Account, ApiKey, Authorizer, BasePathMapping, ClientCertificate, Deployment, DocumentationPart, DocumentationVersion, DomainName, GatewayResponse, Method, Model, RequestValidator, Resource, RestApi, Stage, UsagePlan, UsagePlanKey, VpcLink
+AWS ApiGatewayV2 Resources: Api, Authorizer, Deployment, Integration, IntegrationResponse, Model, Route, RouteResponse, Stage
+AWS AppStream Resources: DirectoryConfig, Fleet, ImageBuilder, Stack, StackFleetAssociation, StackUserAssociation, User
+AWS AppSync Resources: ApiKey, DataSource, FunctionConfiguration, GraphQLApi, GraphQLSchema, Resolver
+AWS ApplicationAutoScaling Resources: ScalableTarget, ScalingPolicy
+AWS Athena Resources: NamedQuery
+AWS AutoScaling Resources: AutoScalingGroup, LaunchConfiguration, LifecycleHook, ScalingPolicy, ScheduledAction
+AWS AutoScalingPlans Resources: ScalingPlan
+AWS Batch Resources: ComputeEnvironment, JobDefinition, JobQueue
+AWS Budgets Resources: Budget
+AWS CertificateManager Resources: Certificate
+AWS Cloud9 Resources: EnvironmentEC2
+AWS CloudFormation Resources: CustomResource, Macro, Stack, WaitCondition, WaitConditionHandle
+AWS CloudFront Resources: CloudFrontOriginAccessIdentity, Distribution, StreamingDistribution
+AWS CloudTrail Resources: Trail
+AWS CloudWatch Resources: Alarm, Dashboard
+AWS CodeBuild Resources: Project
+AWS CodeCommit Resources: Repository
+AWS CodeDeploy Resources: Application, DeploymentConfig, DeploymentGroup
+AWS CodePipeline Resources: CustomActionType, Pipeline, Webhook
+AWS Cognito Resources: IdentityPool, IdentityPoolRoleAttachment, UserPool, UserPoolClient, UserPoolGroup, UserPoolUser, UserPoolUserToGroupAttachment
+AWS Config Resources: AggregationAuthorization, ConfigRule, ConfigurationAggregator, ConfigurationRecorder, DeliveryChannel
+AWS DAX Resources: Cluster, ParameterGroup, SubnetGroup
+AWS DLM Resources: LifecyclePolicy
+AWS DMS Resources: Certificate, Endpoint, EventSubscription, ReplicationInstance, ReplicationSubnetGroup, ReplicationTask
+AWS DataPipeline Resources: Pipeline
+AWS DirectoryService Resources: MicrosoftAD, SimpleAD
+AWS DocDB Resources: DBCluster, DBClusterParameterGroup, DBInstance, DBSubnetGroup
+AWS DynamoDB Resources: Table
+AWS EC2 Resources: CustomerGateway, DHCPOptions, EC2Fleet, EIP, EIPAssociation, EgressOnlyInternetGateway, FlowLog, Host, Instance, InternetGateway, LaunchTemplate, NatGateway, NetworkAcl, NetworkAclEntry, NetworkInterface, NetworkInterfaceAttachment, NetworkInterfacePermission, PlacementGroup, Route, RouteTable, SecurityGroup, SecurityGroupEgress, SecurityGroupIngress, SpotFleet, Subnet, SubnetCidrBlock, SubnetNetworkAclAssociation, SubnetRouteTableAssociation, TransitGateway, TransitGatewayAttachment, TransitGatewayRoute, TransitGatewayRouteTable, TransitGatewayRouteTableAssociation, TransitGatewayRouteTablePropagation, TrunkInterfaceAssociation, VPC, VPCCidrBlock, VPCDHCPOptionsAssociation, VPCEndpoint, VPCEndpointConnectionNotification, VPCEndpointService, VPCEndpointServicePermissions, VPCGatewayAttachment, VPCPeeringConnection, VPNConnection, VPNConnectionRoute, VPNGateway, VPNGatewayRoutePropagation, Volume, VolumeAttachment
+AWS ECR Resources: Repository
+AWS ECS Resources: Cluster, Service, TaskDefinition
+AWS EFS Resources: FileSystem, MountTarget
+AWS EKS Resources: Cluster
+AWS EMR Resources: Cluster, InstanceFleetConfig, InstanceGroupConfig, SecurityConfiguration, Step
+AWS ElastiCache Resources: CacheCluster, ParameterGroup, ReplicationGroup, SecurityGroup, SecurityGroupIngress, SubnetGroup
+AWS ElasticBeanstalk Resources: Application, ApplicationVersion, ConfigurationTemplate, Environment
+AWS ElasticLoadBalancing Resources: LoadBalancer
+AWS ElasticLoadBalancingV2 Resources: Listener, ListenerCertificate, ListenerRule, LoadBalancer, TargetGroup
+AWS Elasticsearch Resources: Domain
+AWS Events Resources: EventBusPolicy, Rule
+AWS FSx Resources: FileSystem
+AWS GameLift Resources: Alias, Build, Fleet
+AWS Glue Resources: Classifier, Connection, Crawler, Database, DevEndpoint, Job, Partition, Table, Trigger
+AWS GuardDuty Resources: Detector, Filter, IPSet, Master, Member, ThreatIntelSet
+AWS IAM Resources: AccessKey, Group, InstanceProfile, ManagedPolicy, Policy, Role, ServiceLinkedRole, User, UserToGroupAddition
+AWS Inspector Resources: AssessmentTarget, AssessmentTemplate, ResourceGroup
+AWS IoT Resources: Certificate, Policy, PolicyPrincipalAttachment, Thing, ThingPrincipalAttachment, TopicRule
+AWS IoT1Click Resources: Device, Placement, Project
+AWS IoTAnalytics Resources: Channel, Dataset, Datastore, Pipeline
+AWS KMS Resources: Alias, Key
+AWS Kinesis Resources: Stream, StreamConsumer
+AWS KinesisAnalytics Resources: Application, ApplicationOutput, ApplicationReferenceDataSource
+AWS KinesisAnalyticsV2 Resources: Application, ApplicationCloudWatchLoggingOption, ApplicationOutput, ApplicationReferenceDataSource
+AWS KinesisFirehose Resources: DeliveryStream
+AWS Lambda Resources: Alias, EventSourceMapping, Function, LayerVersion, LayerVersionPermission, Permission, Version
+AWS Logs Resources: Destination, LogGroup, LogStream, MetricFilter, SubscriptionFilter
+AWS Neptune Resources: DBCluster, DBClusterParameterGroup, DBInstance, DBParameterGroup, DBSubnetGroup
+AWS OpsWorks Resources: App, ElasticLoadBalancerAttachment, Instance, Layer, Stack, UserProfile, Volume
+AWS OpsWorksCM Resources: Server
+AWS RAM Resources: ResourceShare
+AWS RDS Resources: DBCluster, DBClusterParameterGroup, DBInstance, DBParameterGroup, DBSecurityGroup, DBSecurityGroupIngress, DBSubnetGroup, EventSubscription, OptionGroup
+AWS Redshift Resources: Cluster, ClusterParameterGroup, ClusterSecurityGroup, ClusterSecurityGroupIngress, ClusterSubnetGroup
+AWS RoboMaker Resources: Fleet, Robot, RobotApplication, RobotApplicationVersion, SimulationApplication, SimulationApplicationVersion
+AWS Route53 Resources: HealthCheck, HostedZone, RecordSet, RecordSetGroup
+AWS Route53Resolver Resources: ResolverEndpoint, ResolverRule, ResolverRuleAssociation
+AWS S3 Resources: Bucket, BucketPolicy
+AWS SDB Resources: Domain
+AWS SES Resources: ConfigurationSet, ConfigurationSetEventDestination, ReceiptFilter, ReceiptRule, ReceiptRuleSet, Template
+AWS SNS Resources: Subscription, Topic, TopicPolicy
+AWS SQS Resources: Queue, QueuePolicy
+AWS SSM Resources: Association, Document, MaintenanceWindow, MaintenanceWindowTarget, MaintenanceWindowTask, Parameter, PatchBaseline, ResourceDataSync
+AWS SageMaker Resources: Endpoint, EndpointConfig, Model, NotebookInstance, NotebookInstanceLifecycleConfig
+AWS SecretsManager Resources: ResourcePolicy, RotationSchedule, Secret, SecretTargetAttachment
+AWS ServiceCatalog Resources: AcceptedPortfolioShare, CloudFormationProduct, CloudFormationProvisionedProduct, LaunchNotificationConstraint, LaunchRoleConstraint, LaunchTemplateConstraint, Portfolio, PortfolioPrincipalAssociation, PortfolioProductAssociation, PortfolioShare, TagOption, TagOptionAssociation
+AWS ServiceDiscovery Resources: HttpNamespace, Instance, PrivateDnsNamespace, PublicDnsNamespace, Service
+AWS StepFunctions Resources: Activity, StateMachine
+AWS WAF Resources: ByteMatchSet, IPSet, Rule, SizeConstraintSet, SqlInjectionMatchSet, WebACL, XssMatchSet
+AWS WAFRegional Resources: ByteMatchSet, IPSet, Rule, SizeConstraintSet, SqlInjectionMatchSet, WebACL, WebACLAssociation, XssMatchSet
+AWS WorkSpaces Resources: Workspace
 ```

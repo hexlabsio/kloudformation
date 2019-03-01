@@ -6,7 +6,14 @@ has_children: true
 ---
 <script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>
 <img style="margin: -2em; margin-left: -4em" src="../kloud-formation-logo-white.png"/>
-
+<style>
+blockquote{
+    color: #666;
+    margin: 0;
+    padding-left: 3em;
+    border-left: 0.5em #f2c152 solid;
+}
+</style>
 ## Table of contents
 {: .no_toc .text-delta }
 
@@ -26,6 +33,8 @@ KloudFormation can be invoked in many ways allowing any project to use it, not j
  * Stacks as Code
  * Modular Templating
  * Up to Date
+ 
+ > Full List of Resources [here](../reference/resources.html#full-resource-list)
 
 ## This is what it looks like
 {: .no_toc }
