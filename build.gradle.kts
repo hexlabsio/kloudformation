@@ -45,6 +45,7 @@ repositories {
     mavenCentral()
 }
 
+
 dependencies {
     implementation(group = "com.fasterxml.jackson.core", name = "jackson-databind", version = jacksonVersion)
     implementation(group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version = jacksonVersion)
@@ -94,6 +95,7 @@ val test by tasks.existing(Test::class) {
 
 val sourcesJar by tasks.creating(Jar::class) {
     classifier = "sources"
+    println(sourceSets["main"].allSource)
     from(sourceSets["main"].allSource)
 }
 
@@ -102,7 +104,14 @@ val shadowJar by tasks.getting(ShadowJar::class) {
     manifest {
         attributes(mapOf("Main-Class" to "io.kloudformation.StackBuilderKt"))
     }
-    exclude("org.jetbrains.kotlin")
+    dependencies {
+        exclude(dependency("org.jetbrains.kotlin::$kotlinVersion"))
+    }
+}
+
+artifacts {
+    add("archives", shadowJar)
+    add("archives", sourcesJar)
 }
 
 bintray {
