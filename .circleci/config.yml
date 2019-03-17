@@ -18,3 +18,19 @@ jobs:
           paths:
             - ~/.gradle
           key: gradle-{{ checksum "build.gradle.kts" }}
+
+workflows:
+  version: 2
+  onChange:
+    jobs:
+      - build
+  nightly:
+    triggers:
+    - schedule:
+        cron: "0 0 7 * *"
+        filters:
+          branches:
+            only:
+            - master
+    jobs:
+    - build
