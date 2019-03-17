@@ -9,14 +9,17 @@ private val specificationListUrl = "https://docs.aws.amazon.com/AWSCloudFormatio
 fun main(args: Array<String>) {
     val scrapedLinks = SpecificationScraper.scrapeLinks(specificationListUrl)
     val downloadedSpecificationStrings = SpecificationDownloader.downloadAll(scrapedLinks)
-    val parsedSpecifications = downloadedSpecificationStrings.map {
-        try {
-            jacksonObjectMapper.readValue<Specification>(it.value)
-        } catch (ex: Exception) {
-            System.err.println("Failed to parse ${it.key} specification")
-            Specification(emptyMap(), emptyMap(), "")
-        }
-    }
+    System.err.println("EU (Stockholm) is broken!!")
+    val parsedSpecifications = downloadedSpecificationStrings
+            .filter { it.key != "EU (Stockholm)" }
+            .map {
+                try {
+                    jacksonObjectMapper.readValue<Specification>(it.value)
+                } catch (ex: Exception) {
+                    System.err.println("Failed to parse ${it.key} specification")
+                    Specification(emptyMap(), emptyMap(), "")
+                }
+            }
     val mergedSpecification = SpecificationMerger.merge(parsedSpecifications)
     SpecificationPoet.generate(mergedSpecification)
 }

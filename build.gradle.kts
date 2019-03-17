@@ -99,6 +99,10 @@ val sourcesJar by tasks.creating(Jar::class) {
 
 val shadowJar by tasks.getting(ShadowJar::class) {
     classifier = "uber"
+    manifest {
+        attributes(mapOf("Main-Class" to "io.kloudformation.StackBuilderKt"))
+    }
+    exclude("org.jetbrains.kotlin")
 }
 
 bintray {
