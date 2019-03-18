@@ -5,7 +5,9 @@ parent: Get Started
 nav_order: 2
 ---
 
-<script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>
+<script src="https://unpkg.com/kotlin-playground@1"
+ data-selector=".kotlin"
+ data-server="https://playground.hexlabs.io"></script>
 <style>
 blockquote{
     color: #666;
@@ -17,13 +19,41 @@ blockquote{
 
 # No Build Tool
 
+You don't need a build tool to run KloudFormation. You can install Kloudformation on mac / linux by opening a terminal and running the following command
+
+```bash
+curl -s https://install.kloudformation.hexlabs.io | sh
+```
+
+Then this to see how it works:
+```bash
+kloudformation help
+```
+
+## Manually
+
+Alternatively if gradle, maven or the above options don't suit you can try running manually with the uber jar.
+
 You can create a template from anywhere as long as you have **kotlinc** and **java** available.
 
 Make sure you build a stack by implementing `StackBuilder`
 
-<pre class="kotlin" data-highlight-only>
+<pre class="kotlin">
+import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.toYaml
+//sampleStart
+import io.kloudformation.KloudFormation
+import io.kloudformation.StackBuilder
+
 class Stack: StackBuilder {
-    override fun KloudFormation.create() { . . . }
+    override fun KloudFormation.create() {  }
+}
+//sampleEnd
+
+fun main(){
+ println(KloudFormationTemplate.create {
+         Stack().run { create() }
+ }.toYaml())
 }
 </pre>
 

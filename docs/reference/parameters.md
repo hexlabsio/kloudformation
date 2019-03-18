@@ -162,3 +162,18 @@ Outputs:
     Value:
       Ref: "AWS::AccountId"
 ```
+
+### Available Pseudo Parameters
+
+> All appear under `io.kloudformation.model.KloudFormationTemplate.Builder.Companion`
+
+<pre class="kotlin" data-highlight-only>
+awsAccountId
+awsNoValue
+awsNotificationArns
+awsPartition
+awsRegion
+awsStackId
+awsStackName
+awsUrlSuffix
+</pre>

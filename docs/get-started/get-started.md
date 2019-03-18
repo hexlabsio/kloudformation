@@ -68,6 +68,17 @@ Resources:
 
 Any project can use KloudFormation. To get the best experience, it is recommended to use an IDE with code completion like IntelliJ IDEA
 
+If using Linux or Mac you can install and run KloudFormation as follows:
+
+```bash
+curl -s https://install.kloudformation.hexlabs.io | sh
+```
+
+Then this to see how it works:
+```bash
+kloudformation help
+```
+
 For Reference Material: See [Reference](../reference/reference.html)
 
 To Invert a CloudFormation Template into Kloudformation: See [Inverting CloudFormation](../inversion)

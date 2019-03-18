@@ -4,7 +4,9 @@ title: Fundamentals
 parent: Reference
 nav_order: 0
 ---
-<script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>
+<script src="https://unpkg.com/kotlin-playground@1"
+ data-selector=".kotlin"
+ data-server="https://playground.hexlabs.io"></script>
 <style>
 blockquote{
     color: #666;
@@ -60,12 +62,27 @@ Here are some of the resource packages
 
 The builder function can be invoked by passing any required parameters for that resource inside ( ) brackets
 
-<pre class="kotlin" data-highlight-only>
+<pre class="kotlin">
+import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.toYaml
+//sampleStart
+import io.kloudformation.KloudFormation
+import io.kloudformation.StackBuilder
+import io.kloudformation.resource.aws.sns.topic
+import io.kloudformation.resource.aws.ec2.vPC
+
 class Stack: StackBuilder {
     override fun KloudFormation.create() {
         topic() // No required properties
         vPC(cidrBlock = +"0.0.0.0/0") // cidrBlock is required
     }
+}
+//sampleEnd
+
+fun main(){
+ println(KloudFormationTemplate.create {
+         Stack().run { create() }
+ }.toYaml())
 }
 </pre>
 
@@ -75,7 +92,15 @@ class Stack: StackBuilder {
 
 Any properties that are not required appear as functions on the builder for that resource. The builder is passed to you in the last argument. The last argument can be a lambda with { } braces.
 
-<pre class="kotlin" data-highlight-only>
+<pre class="kotlin">
+import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.toYaml
+//sampleStart
+import io.kloudformation.KloudFormation
+import io.kloudformation.StackBuilder
+import io.kloudformation.resource.aws.s3.bucket
+import io.kloudformation.resource.aws.ec2.vPC
+
 class Stack: StackBuilder {
     override fun KloudFormation.create() {
         bucket {
@@ -85,6 +110,13 @@ class Stack: StackBuilder {
             enableDnsHostnames(true) // This property is not required
         }
     }
+}
+//sampleEnd
+
+fun main(){
+ println(KloudFormationTemplate.create {
+         Stack().run { create() }
+ }.toYaml())
 }
 </pre>
 
