@@ -3,7 +3,7 @@ package io.kloudformation.module
 import io.kloudformation.KloudFormation
 import io.kloudformation.Value
 
-typealias Builder<Parts> = KloudFormation.(Parts.() -> Unit) -> Unit
+typealias Builder<Builds, Parts> = KloudFormation.(Parts.() -> Unit) -> Builds
 
 interface Properties
 object NoProps : Properties
@@ -64,7 +64,7 @@ fun <Builder, R, P : Properties> optionalModification(absent: Boolean = false) =
     if (absent) remove()
 }
 
-fun <Builds : Module, Parts> builder(builder: ModuleBuilder<Builds, Parts>): Builder<Parts> = {
+fun <Builds : Module, Parts> builder(builder: ModuleBuilder<Builds, Parts>): Builder<Builds, Parts> = {
     builder.run { create(it) }
 }
 fun <Builds : Module, Parts, Predefined : Properties, Props : Properties> KloudFormation.builder(builder: SubModuleBuilder<Builds, Parts, Predefined, Props>, partBuilder: Parts.() -> Unit): Builds =
