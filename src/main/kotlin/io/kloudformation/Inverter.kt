@@ -41,18 +41,17 @@ import org.yaml.snakeyaml.nodes.Node
 import org.yaml.snakeyaml.nodes.ScalarNode
 import org.yaml.snakeyaml.nodes.SequenceNode
 import org.yaml.snakeyaml.nodes.Tag
+import java.nio.file.Path
 
 fun main(args: Array<String>) {
     try {
         val fileText = File(args[0]).readText()
-        val standard = mapToStandard(fileText)
-        Inverter.invert(standard).writeTo(File(args[1]))
+        Inverter.invert(fileText).writeTo(File(args[1]))
     } catch (e: Exception) {
         if (e.message != null) error(e.message.toString()) else e.printStackTrace()
     }
 }
 
-fun mapToStandard(yaml: String) = with(Yaml(AwsConstructor)) { dump(load(yaml)).trim() }
 
 object AwsConstructor : Constructor() {
     private val arrayNodes = listOf("Cidr", "And", "Equals", "If", "Not", "Or", "FindInMap", "Join", "Select", "Split", "Sub")
@@ -85,16 +84,28 @@ object AwsConstructor : Constructor() {
         }
     }
 }
-
+data class Inversion( val fileSpec: FileSpec) {
+    fun writeTo(dir: Path) = fileSpec.writeTo(dir)
+    fun writeTo(dir: File) = fileSpec.writeTo(dir)
+    fun writeTo(dir: Appendable) = fileSpec.writeTo(dir)
+    override fun toString() = fileSpec.toString()
+}
 object Inverter {
     class InverterException(message: String) : Exception(message)
     data class ResourceInfo(val type: String, val canonicalPackage: String, val name: String, val required: Map<String, ResourceTypeInfo>, val notRequired: Map<String, ResourceTypeInfo>)
     data class ResourceTypeInfo(val rawType: String = "", val canonicalPackage: String? = null, val className: String? = null, val required: Boolean = true, val valueType: Boolean = false, val list: Boolean = false, val map: Boolean = false, val parameterA: ResourceTypeInfo? = null, val parameterB: ResourceTypeInfo? = null)
 
-    fun invert(template: String): FileSpec {
-        return ObjectMapper(YAMLFactory())
-                .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter()))
-                .readValue(template)
+    fun mapToStandard(yaml: String): String = with(Yaml(AwsConstructor)) { dump(load(yaml)).trim() }
+
+    fun invert(template: String): Inversion {
+        return mapToStandard(template)
+                .let{ ObjectMapper(YAMLFactory())
+                        .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter()))
+                        .readValue<FileSpec>(it) }
+                .let{ Inversion(it) }
+
+
+
     }
 
     private val escapees = mapOf(
