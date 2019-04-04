@@ -111,8 +111,3 @@ s3Bucket {
     modify { /* this is Bucket.Builder */ }
 }
 </pre>
-
-## S3 Website Example
-
-#### Coming Soon
-{: .no_toc }

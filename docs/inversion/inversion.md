@@ -1,7 +1,7 @@
 ---
 layout: default
 title: Inversion
-nav_order: 2
+nav_order: 3
 has_children: true
 ---
 <script src="https://unpkg.com/kotlin-playground@1" data-selector=".kotlin"></script>

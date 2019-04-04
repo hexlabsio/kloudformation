@@ -22,13 +22,43 @@ blockquote{
 You don't need a build tool to run KloudFormation. You can install Kloudformation on mac / linux by opening a terminal and running the following command
 
 ```bash
-curl -s https://install.kloudformation.hexlabs.io | sh
+$ curl -sSL https://install.kloudformation.hexlabs.io | bash
 ```
 
 Then this to see how it works:
 ```bash
-kloudformation help
+$ kloudformation help
 ```
+
+
+> For More Info on the Command Line Interface See [Command Line](../command-line/command-line.html)
+
+## Code Completion in IntelliJ without Maven / Gradle
+
+The first time you run the KloudFormation script above it will download jars into a directory named `kloudformation` wherever you ran the script.
+
+You can then open the project in IntelliJ as follows:
+
+1. After installing KloudFormation (Above), In a clean directory Run:
+
+     ```bash 
+     $ mkdir stack && kloudformation init -stack-file stack/Stack.kt
+     ```
+ 
+2. Transpile the generated Stack file (This will download all jars into a kloudformation directory):
+
+    ```bash 
+    $ kloudformation -stack-file stack/Stack.kt
+    ``` 
+
+3. Open the current directory in IntelliJ
+
+4. In IntelliJ, right click on the `stack` folder and select `Mark Directory As > Sources Root`
+
+5. In IntelliJ, right click on `kloudformation/kloudformation-x.x.xxx.jar` and select `Add as Library...` and click OK.
+
+6. Open stack/Stack.kt and start writting your stack.
+
 
 ## Manually
 

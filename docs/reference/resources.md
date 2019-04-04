@@ -272,7 +272,7 @@ Resources:
 
 # Full Resource List
 
->> Note: All resources are generated and are up to date with Amazon's specifications. If a resource is not listed below it is because this textual list is not generated.
+>> Note: All resources are generated and are up to date with Amazon's specifications. If a resource is not listed below it is because this textual list is generated manually.
 
 | CloudFormation | KloudFormation |
 |---|---|

@@ -71,12 +71,12 @@ Any project can use KloudFormation. To get the best experience, it is recommende
 If using Linux or Mac you can install and run KloudFormation as follows:
 
 ```bash
-curl -s https://install.kloudformation.hexlabs.io | sh
+$ curl -sSL https://install.kloudformation.hexlabs.io | bash
 ```
 
 Then this to see how it works:
 ```bash
-kloudformation help
+$ kloudformation help
 ```
 
 For Reference Material: See [Reference](../reference/reference.html)
