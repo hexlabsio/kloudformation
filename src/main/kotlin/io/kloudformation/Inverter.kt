@@ -13,7 +13,7 @@ import com.squareup.kotlinpoet.ClassName
 import com.squareup.kotlinpoet.CodeBlock
 import com.squareup.kotlinpoet.FileSpec
 import com.squareup.kotlinpoet.FunSpec
-import io.kloudformation.model.KloudFormationTemplate
+import com.squareup.kotlinpoet.KModifier
 import io.kloudformation.model.Output
 import io.kloudformation.specification.SpecificationPoet
 import org.yaml.snakeyaml.Yaml
@@ -46,7 +46,11 @@ fun main(args: Array<String>) {
     try {
         val fileText = File(args[0]).readText()
         val standard = mapToStandard(fileText)
-        Inverter.invert(standard).writeTo(File(args[1]))
+        val classPackage = args[1]
+        val fileLocation = args[2].let { if (it.endsWith(".kt")) it.substringBeforeLast(".kt") else it }
+        val fileName = fileLocation.substringAfterLast("/")
+        val directory = fileLocation.substringBeforeLast("/")
+        Inverter.invert(standard, classPackage, fileName).writeTo(File(directory))
     } catch (e: Exception) {
         if (e.message != null) error(e.message.toString()) else e.printStackTrace()
     }
@@ -91,9 +95,9 @@ object Inverter {
     data class ResourceInfo(val type: String, val canonicalPackage: String, val name: String, val required: Map<String, ResourceTypeInfo>, val notRequired: Map<String, ResourceTypeInfo>)
     data class ResourceTypeInfo(val rawType: String = "", val canonicalPackage: String? = null, val className: String? = null, val required: Boolean = true, val valueType: Boolean = false, val list: Boolean = false, val map: Boolean = false, val parameterA: ResourceTypeInfo? = null, val parameterB: ResourceTypeInfo? = null)
 
-    fun invert(template: String): FileSpec {
+    fun invert(template: String, classPackage: String, fileName: String): FileSpec {
         return ObjectMapper(YAMLFactory())
-                .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter()))
+                .registerModule(SimpleModule().addDeserializer(FileSpec::class.java, StackInverter(classPackage, fileName)))
                 .readValue(template)
     }
 
@@ -170,6 +174,8 @@ object Inverter {
     } + end
 
     class StackInverter(
+        val classPackage: String,
+        val fileName: String,
         private val staticImports: MutableList<Pair<String, String>> = mutableListOf(),
         private val parameters: MutableMap<String, JsonNode> = mutableMapOf(),
         private val conditions: MutableMap<String, JsonNode> = mutableMapOf(),
@@ -811,20 +817,23 @@ object Inverter {
             resources.putAll(node.mapFromFieldNamed("Resources"))
             val outputCodeBuilder = CodeBuilder()
             val outputsCode = outputCodeBuilder.codeForOutputs(node)
-            return FunSpec.builder(functionName)
-                    .returns(KloudFormationTemplate::class)
-                    .addCode("return %T.create {\n⇥⇥", KloudFormationTemplate::class)
+            return FunSpec.builder("create")
+                    .addModifiers(KModifier.OVERRIDE)
+                    .receiver(KloudFormation::class)
                     .addCode(CodeBuilder().codeForParameters())
                     .addCode(CodeBuilder().codeForMetadata(node))
                     .addCode(CodeBuilder().codeForConditions())
                     .addCode(CodeBuilder().codeForMappings())
                     .addCode(codeForResources(outputCodeBuilder.refBuilder))
                     .addCode(outputsCode)
-                    .addCode("⇤}\n⇤")
                     .build()
         }
 
-        private fun classForTemplate(node: JsonNode) = TypeSpec.objectBuilder(className).addFunction(functionForTemplate(node)).build()
+        private fun classForTemplate(className: String, node: JsonNode) = TypeSpec
+                .classBuilder(className)
+                .addSuperinterface(StackBuilder::class)
+                .addFunction(functionForTemplate(node))
+                .build()
 
         data class RefBuilder(
             val name: String = "",
@@ -875,8 +884,8 @@ object Inverter {
         }
 
         override fun deserialize(parser: JsonParser, context: DeserializationContext): FileSpec =
-                FileSpec.builder("$kPackage.stack", className)
-                        .addType(classForTemplate(parser.codec.readTree(parser)))
+                FileSpec.builder(classPackage, fileName)
+                        .addType(classForTemplate(fileName, parser.codec.readTree(parser)))
                         .also { file -> staticImports.forEach { (pkg, name) -> file.addImport(pkg, name) } }
                         .build()
     }

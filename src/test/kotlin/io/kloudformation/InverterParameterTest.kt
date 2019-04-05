@@ -9,7 +9,7 @@ class InverterParameterTest {
     private val testClass = "Parameters"
 
     private fun compare(template: String, function: String) = compare(template, testClass, function) {
-        with(Inverter.StackInverter(parameters = it.fieldsAsMap())) {
+        with(Inverter.StackInverter(parameters = it.fieldsAsMap(), classPackage = "", fileName = "")) {
             CodeBuilder().codeForParameters().toString().trim()
         }
     }

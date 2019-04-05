@@ -9,7 +9,7 @@ class InverterResourceTest {
     private val testClass = "Resources"
 
     private fun compare(template: String, function: String) = compare(template, testClass, function) {
-        with(Inverter.StackInverter(resources = it.fieldsAsMap())) {
+        with(Inverter.StackInverter(resources = it.fieldsAsMap(), classPackage = "", fileName = "")) {
             codeForResources().toString().trim()
         }
     }

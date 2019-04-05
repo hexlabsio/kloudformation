@@ -12,7 +12,7 @@ class TemplateTest {
         val parameters = fields["Parameters"]!!.fieldsAsMap()
         val resources = fields["Resources"]!!.fieldsAsMap()
 
-        with(Inverter.StackInverter(parameters = parameters, resources = resources)) {
+        with(Inverter.StackInverter(parameters = parameters, resources = resources, classPackage = "", fileName = "")) {
             val outputCodeBuilder = CodeBuilder()
             val outputsCode = outputCodeBuilder.codeForOutputs(it)
             CodeBuilder().codeForParameters().toString().trim() + "\n" +
