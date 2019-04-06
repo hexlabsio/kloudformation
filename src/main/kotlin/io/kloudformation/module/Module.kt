@@ -17,9 +17,9 @@ abstract class Modification<T, R, P : Properties> : Mod<T, R, P> {
     open var replaceWith: R? = null
     open var modifyBuilder: T.(P) -> T = { this }
     open var modifyProps: P.() -> Unit = {}
-    operator fun invoke(modify: Modification<T, R, P>.() -> Unit) {
+    operator fun invoke(modify: T.(P) -> Unit) {
         replaceWith = null
-        run(modify)
+        modifyBuilder = { modify(it); this }
     }
     operator fun invoke(props: P, modify: Modification<T, R, P>.(P) -> R): R {
         return if (replaceWith != null) replaceWith!! else {
@@ -27,7 +27,6 @@ abstract class Modification<T, R, P : Properties> : Mod<T, R, P> {
             return item!!
         }
     }
-    fun modify(mod: T.(P) -> Unit) { modifyBuilder = { mod(it); this } }
     fun props(mod: P.() -> Unit) { modifyProps = mod }
     fun props(defaults: P) = defaults.apply(modifyProps)
     fun replaceWith(item: R) { replaceWith = item }
@@ -67,7 +66,7 @@ fun <Builder, R, P : Properties> optionalModification(absent: Boolean = false) =
 fun <Builds : Module, Parts> builder(builder: ModuleBuilder<Builds, Parts>): Builder<Builds, Parts> = {
     builder.run { create(it) }
 }
-fun <Builds : Module, Parts, Predefined : Properties, Props : Properties> KloudFormation.builder(builder: SubModuleBuilder<Builds, Parts, Predefined, Props>, partBuilder: Parts.() -> Unit): Builds =
+fun <Builds : Module, Parts, Predefined : Properties> KloudFormation.builder(builder: SubModuleBuilder<Builds, Parts, Predefined>, partBuilder: Parts.() -> Unit): Builds =
         builder.run { create(partBuilder) }
 fun <Builds : Module, Parts> KloudFormation.builder(builder: ModuleBuilder<Builds, Parts>, partBuilder: Parts.() -> Unit): Builds =
         builder.run { create(partBuilder) }
@@ -81,13 +80,21 @@ abstract class ModuleBuilder<Builds : Module, Parts>(val parts: Parts) {
     abstract fun KloudFormation.buildModule(): Parts.() -> Builds
 }
 
-abstract class SubModuleBuilder<Builds : Module, Parts, Predefined : Properties, Props : Properties>(val pre: Predefined, parts: Parts) : ModuleBuilder<Builds, Parts>(parts)
+abstract class SubModuleBuilder<Builds : Module, Parts, Predefined : Properties>(val pre: Predefined, parts: Parts) : ModuleBuilder<Builds, Parts>(parts)
 
-class SubModules<Builds : Module, Parts, Predefined : Properties, UserProps : Properties>(
-    val builder: (Predefined, UserProps) -> SubModuleBuilder<Builds, Parts, Predefined, UserProps>,
+class NoPropsSubModules<Builds : Module, Parts, Predefined : Properties>(
+    builder: (Predefined) -> SubModuleBuilder<Builds, Parts, Predefined>
+) : SubModules<Builds, Parts, Predefined, NoProps>({ predefined, _ -> builder(predefined) }) {
+    operator fun invoke(modifications: Parts.(Predefined) -> Unit = {}) {
+        super.invoke(NoProps, modifications)
+    }
+}
+
+open class SubModules<Builds : Module, Parts, Predefined : Properties, UserProps : Properties>(
+    val builder: (Predefined, UserProps) -> SubModuleBuilder<Builds, Parts, Predefined>,
     private val subModules: MutableList<SubModule<Builds, Parts, Predefined, UserProps>> = mutableListOf()
 ) {
-    operator fun invoke(props: UserProps, modifications: Modification<Parts, Builds, Predefined>.() -> Unit = {}) {
+    operator fun invoke(props: UserProps, modifications: Parts.(Predefined) -> Unit = {}) {
         val module: SubModule<Builds, Parts, Predefined, UserProps> = SubModule(builder)
         module(props, modifications)
         subModules.add(module)
@@ -95,8 +102,16 @@ class SubModules<Builds : Module, Parts, Predefined : Properties, UserProps : Pr
     fun modules(): List<SubModule<Builds, Parts, Predefined, UserProps>> = subModules
 }
 
-class SubModule<Builds : Module, Parts, Predefined : Properties, UserProps : Properties>(
-    val builder: (Predefined, UserProps) -> SubModuleBuilder<Builds, Parts, Predefined, UserProps>,
+class NoPropsSubModule<Builds : Module, Parts, Predefined : Properties>(
+    builder: (Predefined) -> SubModuleBuilder<Builds, Parts, Predefined>
+) : SubModule<Builds, Parts, Predefined, NoProps>({ predefined, _ -> builder(predefined) }) {
+    operator fun invoke(modifications: Parts.(Predefined) -> Unit = {}) {
+        super.invoke(NoProps, modifications)
+    }
+}
+
+open class SubModule<Builds : Module, Parts, Predefined : Properties, UserProps : Properties>(
+    val builder: (Predefined, UserProps) -> SubModuleBuilder<Builds, Parts, Predefined>,
     private var modification: Modification<Parts, Builds, Predefined> = modification(),
     private var subModule: (KloudFormation.(Predefined) -> Builds)? = null
 ) {
@@ -106,10 +121,10 @@ class SubModule<Builds : Module, Parts, Predefined : Properties, UserProps : Pro
     }
     operator fun KloudFormation.invoke(pre: Predefined): Builds? = subModule?.invoke(this, pre)
 
-    operator fun invoke(props: UserProps, modifications: Modification<Parts, Builds, Predefined>.() -> Unit = {}) {
+    operator fun invoke(props: UserProps, modifications: Parts.(Predefined) -> Unit = {}) {
         subModule = { pre ->
             modification(pre) { preProps ->
-                apply(modifications)
+                modification.invoke(modifications)
                 modifyProps(preProps)
                 with(builder(preProps, props)) {
                     this.parts.modifyBuilder(preProps)
@@ -119,3 +134,16 @@ class SubModule<Builds : Module, Parts, Predefined : Properties, UserProps : Pro
         }
     }
 }
+
+fun <Builds : Module, Parts, Predefined : Properties, UserProps : Properties> submodule(
+    builder: (Predefined, UserProps) -> SubModuleBuilder<Builds, Parts, Predefined>
+) = SubModule(builder)
+fun <Builds : Module, Parts, Predefined : Properties, UserProps : Properties> submodules(
+    builder: (Predefined, UserProps) -> SubModuleBuilder<Builds, Parts, Predefined>
+) = SubModules(builder)
+fun <Builds : Module, Parts, Predefined : Properties> submodule(
+    builder: (Predefined) -> SubModuleBuilder<Builds, Parts, Predefined>
+) = NoPropsSubModule(builder)
+fun <Builds : Module, Parts, Predefined : Properties> submodules(
+    builder: (Predefined) -> SubModuleBuilder<Builds, Parts, Predefined>
+) = NoPropsSubModules(builder)
