@@ -13,11 +13,11 @@ fun main(args: Array<String>) {
         default ?: throw IllegalArgumentException("$name argument is required at position $index")
     } else args[index]
     val className = arg("Class name", 0)
-    val yaml = arg("JSON/YAML", 2, "yaml") == "yaml"
+    val yaml = arg("json/yaml", 2, "yaml") == "yaml"
     val templateOutputLocation = arg("Template location", 1, "template" + if (yaml) "yml" else "json")
     val stackBuilderClass = StackBuilder::class.java.classLoader.loadClass(className)
     val builder = KloudFormationTemplate.Builder()
-    stackBuilderClass.declaredMethods[0].invoke(stackBuilderClass.newInstance(), builder)
+    stackBuilderClass.declaredMethods.find { it.name == "create" }?.invoke(stackBuilderClass.newInstance(), builder, args.toList().subList(3, args.size))
     val template = builder.build()
     File(templateOutputLocation).writeText(if (yaml) template.toYaml() else template.toJson())
 }
@@ -27,7 +27,7 @@ fun kloudFormationMapper(yaml: Boolean): ObjectMapper = (if (yaml)ObjectMapper(Y
         .setPropertyNamingStrategy(KloudFormationTemplate.NamingStrategy())
 
 interface StackBuilder {
-    fun KloudFormation.create()
+    fun KloudFormation.create(args: List<String>)
 }
 
 fun KloudFormationTemplate.toYaml() = kloudFormationMapper(yaml = true).writerWithDefaultPrettyPrinter().writeValueAsString(this)
