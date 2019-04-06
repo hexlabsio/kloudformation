@@ -9,11 +9,12 @@ import io.kloudformation.resource.aws.s3.bucket
 import org.junit.jupiter.api.Test
 import kotlin.test.expect
 
-class TestModule(val bucket: Bucket, val child: TestModule?) : Module {
+class TestModule(val bucket: Bucket, val optionalBucket: Bucket?, val child: TestModule?) : Module {
     class BucketProps(var bucketName: Value<String>) : Properties
     class Predefined(var parentName: Value<String>) : Properties
     class Parts {
         val testBucket = modification<Bucket.Builder, Bucket, BucketProps>()
+        val optionalBucket = optionalModification<Bucket.Builder, Bucket, BucketProps>(absent = true)
         val child = submodule { pre: Predefined -> Builder(pre) }
     }
     class Builder(pre: Predefined) : SubModuleBuilder<TestModule, Parts, Predefined>(pre, Parts()) {
@@ -24,8 +25,14 @@ class TestModule(val bucket: Bucket, val child: TestModule?) : Module {
                     modifyBuilder(props)
                 }
             }
+            val optionalBucketResource = optionalBucket(BucketProps(+"optional")) { props ->
+                bucket {
+                    bucketName(props.bucketName)
+                    modifyBuilder(props)
+                }
+            }
             val childModule = child.module(Predefined(bucketResource.bucketName!! + "-child"))()
-            TestModule(bucketResource, childModule)
+            TestModule(bucketResource, optionalBucketResource, childModule)
         }
     }
 }
@@ -43,6 +50,23 @@ class ModuleTest {
                 expect("AWS::S3::Bucket") { this.kloudResourceType }
                 with(this as Bucket) {
                     expect("parent") { bucketName!!.value() }
+                }
+            }
+        }
+    }
+    @Test
+    fun `should create parent bucket and optional bucket`() {
+        val template = KloudFormationTemplate.create {
+            testModule("parent") {
+                optionalBucket.keep()
+            }
+        }
+        with(template.resources.resources.toList()) {
+            expect(2) { size }
+            with(last().second) {
+                expect("AWS::S3::Bucket") { this.kloudResourceType }
+                with(this as Bucket) {
+                    expect("optional") { bucketName!!.value() }
                 }
             }
         }

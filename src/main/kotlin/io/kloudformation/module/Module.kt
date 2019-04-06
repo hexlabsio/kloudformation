@@ -8,11 +8,9 @@ typealias Builder<Builds, Parts> = KloudFormation.(Parts.() -> Unit) -> Builds
 interface Properties
 object NoProps : Properties
 
-interface Mod<T, R, P : Properties>
-
 fun <T> Value<T>.value() = (this as Value.Of<T>).value
 
-abstract class Modification<T, R, P : Properties> : Mod<T, R, P> {
+abstract class Modification<T, R, P : Properties> {
     open var item: R? = null
     open var replaceWith: R? = null
     open var modifyBuilder: T.(P) -> T = { this }
@@ -21,7 +19,7 @@ abstract class Modification<T, R, P : Properties> : Mod<T, R, P> {
         replaceWith = null
         modifyBuilder = { modify(it); this }
     }
-    operator fun invoke(props: P, modify: Modification<T, R, P>.(P) -> R): R {
+    open operator fun invoke(props: P, modify: Modification<T, R, P>.(P) -> R): R {
         return if (replaceWith != null) replaceWith!! else {
             item = modify(props(props))
             return item!!
@@ -31,31 +29,12 @@ abstract class Modification<T, R, P : Properties> : Mod<T, R, P> {
     fun props(defaults: P) = defaults.apply(modifyProps)
     fun replaceWith(item: R) { replaceWith = item }
 }
-
-abstract class OptionalModification<T, R, P : Properties>(private var remove: Boolean = false) : Mod<T, R, P> {
-    open var item: R? = null
-    open var replaceWith: R? = null
-    open var modifyBuilder: T.(P) -> T = { this }
-    open var modifyProps: P.() -> Unit = {}
-    operator fun invoke(modify: OptionalModification<T, R, P>.() -> Unit) {
-        replaceWith = null
-        remove = false
-        run(modify)
-    }
-    operator fun invoke(props: P, modify: OptionalModification<T, R, P>.(P) -> R): R? {
-        return if (!remove) {
-            if (replaceWith != null) replaceWith else {
-                item = modify(props(props))
-                item
-            }
-        } else item
-    }
-    fun modify(mod: T.(P) -> T) { modifyBuilder = { mod(it); this } }
-    fun props(mod: P.() -> Unit) { modifyProps = mod }
-    fun props(defaults: P) = defaults.apply(modifyProps)
+abstract class OptionalModification<T, R, P : Properties> : Modification<T, R?, P>() {
+    private var remove = false
     fun remove() { remove = true }
     fun keep() { remove = false }
-    fun replaceWith(item: R) { replaceWith = item }
+    override fun invoke(props: P, modify: Modification<T, R?, P>.(P) -> R?): R? =
+            if (!remove) super.invoke(props, modify) else null
 }
 
 fun <Builder, R, P : Properties> modification() = object : Modification<Builder, R, P>() {}
