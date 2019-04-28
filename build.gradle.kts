@@ -4,15 +4,13 @@ import groovy.util.Node
 import groovy.util.NodeList
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.gradle.api.tasks.bundling.Jar
-import org.jetbrains.kotlin.gradle.plugin.KotlinSourceSet
 import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
-import java.time.OffsetDateTime
-import java.time.ZoneOffset
 
 fun version(): String {
-    val buildNumber = System.getProperty("BUILD_NUM")
-    val version = "0.1" + if (buildNumber.isNullOrEmpty()) "-SNAPSHOT" else ".$buildNumber"
+    val lastVersionBuildNumber= 121
+    val buildNumber = System.getProperty("BUILD_NUM")?.let { (it.toInt() - lastVersionBuildNumber).toString() } ?: "-SNAPSHOT"
+    val version = "1.0.$buildNumber"
     println("building version $version")
     return version
 }
