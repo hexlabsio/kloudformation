@@ -2,7 +2,6 @@ package io.kloudformation.model.iam
 
 import com.fasterxml.jackson.databind.JsonNode
 import io.kloudformation.Value
-import io.kloudformation.model.KloudFormationTemplate
 
 data class PolicyDocument(
     val statement: List<PolicyStatement>,
@@ -22,4 +21,4 @@ data class PolicyDocument(
     }
 }
 
-fun KloudFormationTemplate.Builder.policyDocument(id: String? = null, version: String? = null, builder: PolicyDocument.Builder.() -> PolicyDocument.Builder) = PolicyDocument.create(id, version).builder().build()
+fun policyDocument(id: String? = null, version: String? = null, builder: PolicyDocument.Builder.() -> PolicyDocument.Builder) = PolicyDocument.create(id, version).builder().build()

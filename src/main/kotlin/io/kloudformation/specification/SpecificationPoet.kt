@@ -19,7 +19,6 @@ import io.kloudformation.KloudResourceBuilder
 import io.kloudformation.ResourceProperties
 import io.kloudformation.Value
 import io.kloudformation.function.Att
-import io.kloudformation.model.KloudFormationDsl
 import io.kloudformation.model.KloudFormationTemplate
 import java.io.File
 import kotlin.reflect.KClass
@@ -182,7 +181,7 @@ object SpecificationPoet {
             val builderTypeName = builderClassNameFrom("$packageName.$name")
             func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderTypeName, returnType = builderTypeName)).defaultValue("{·this·}").build())
         }
-                .receiver(KloudFormationTemplate.Builder::class)
+                .apply { if (isResource) receiver(KloudFormationTemplate.Builder::class) }
                 .build()
     }
 
@@ -230,7 +229,6 @@ object SpecificationPoet {
             .build()
 
     private fun builderClass(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) = TypeSpec.classBuilder("Builder")
-            .addAnnotation(KloudFormationDsl::class)
             .primaryConstructor(builderConstructor(types, proxies, isResource, typeName, propertyInfo))
             .addSuperinterface(KloudResourceBuilder::class)
             .also { if (isResource) it.addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build()) }

@@ -44,6 +44,7 @@ interface Value<out T> {
         }
     }
 }
+operator fun <T> T.unaryPlus() = Value.Of(this)
 
 @JsonSerialize(using = JsonValue.Serializer::class)
 data class JsonValue(val json: Map<String, Any>) : Value<JsonNode> {

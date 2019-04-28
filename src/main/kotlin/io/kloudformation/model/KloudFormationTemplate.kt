@@ -129,8 +129,6 @@ data class KloudFormationTemplate(
             currentDependees = previousDependees
         } }
 
-        operator fun <T> T.unaryPlus() = Value.Of(this)
-
         fun <T> parameter(
             logicalName: String,
             type: String = "String",
