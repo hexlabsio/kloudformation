@@ -4,7 +4,6 @@ import io.kloudformation.KloudFormation
 import io.kloudformation.Value
 import io.kloudformation.function.plus
 import io.kloudformation.model.KloudFormationTemplate
-import io.kloudformation.property.aws.s3.bucket.serverSideEncryptionRule
 import io.kloudformation.resource.aws.s3.Bucket
 import io.kloudformation.resource.aws.s3.bucket
 import io.kloudformation.unaryPlus
