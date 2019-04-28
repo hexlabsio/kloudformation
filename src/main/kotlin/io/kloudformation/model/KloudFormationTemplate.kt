@@ -17,6 +17,9 @@ import io.kloudformation.function.Condition
 import io.kloudformation.function.Intrinsic
 import io.kloudformation.function.Reference
 
+@DslMarker
+annotation class KloudFormationDsl
+
 data class KloudFormationTemplate(
     val awsTemplateFormatVersion: String? = "2010-09-09",
     @JsonInclude(JsonInclude.Include.NON_NULL) val description: String? = null,
@@ -78,6 +81,7 @@ data class KloudFormationTemplate(
                 else method.name.substring(3)
     }
 
+    @KloudFormationDsl
     class Builder(
         val awsTemplateFormatVersion: String? = "2010-09-09",
         val description: String? = null,

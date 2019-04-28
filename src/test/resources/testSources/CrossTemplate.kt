@@ -1,9 +1,11 @@
 package testSources
 
 import io.kloudformation.model.KloudFormationTemplate
+import io.kloudformation.property.aws.s3.bucket.ServerSideEncryptionRule
 import io.kloudformation.resource.aws.sqs.queue
 import io.kloudformation.resource.aws.cloudformation.waitCondition
 import io.kloudformation.resource.aws.cloudformation.waitConditionHandle
+import io.kloudformation.resource.aws.s3.bucket
 import io.kloudformation.resource.aws.sns.subscription
 import io.kloudformation.resource.aws.sns.topic
 
