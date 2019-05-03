@@ -49,13 +49,22 @@ data class PolicyStatement(
             if (item.condition != null && item.condition.conditions.isNotEmpty()) {
                 generator.writeObjectFieldStart("Condition")
                 item.condition.conditions.forEach {
-                    generator.writeObjectFieldStart(it.operator.operation)
-                    it.conditions.forEach { (key, conditions) ->
-                        generator.writeArrayFieldStart(key.key)
-                        conditions.forEach { condition -> generator.writeObject(condition) }
-                        generator.writeEndArray()
+                    when (it) {
+                        is Conditional.Multi -> {
+                            generator.writeObjectFieldStart(it.operator)
+                            it.conditions.forEach { (key, conditions) ->
+                                generator.writeArrayFieldStart(key)
+                                conditions.forEach { condition -> generator.writeObject(condition) }
+                                generator.writeEndArray()
+                            }
+                            generator.writeEndObject()
+                        }
+                        is Conditional.Solo -> {
+                            generator.writeObjectFieldStart(it.operator)
+                            it.conditions.forEach { (key, condition) -> generator.writeObjectField(key, condition) }
+                            generator.writeEndObject()
+                        }
                     }
-                    generator.writeEndObject()
                 }
                 generator.writeEndObject()
             }
@@ -65,7 +74,7 @@ data class PolicyStatement(
 
     data class Builder(val effect: IamPolicyEffect = IamPolicyEffect.Allow, val action: Action, val resource: Resource? = null, val sid: String? = null) {
         var principal: Pair<PrincipalType, List<Value<String>>>? = null
-        val conditionals: MutableList<Conditional<*, *>> = mutableListOf()
+        val conditionals: MutableList<Conditional> = mutableListOf()
         var notPrincipal: Boolean = false
 
         fun principal(principalType: PrincipalType, principal: List<Value<String>>, notPrincipal: Boolean = false) = also {
@@ -77,8 +86,8 @@ data class PolicyStatement(
         fun allPrincipals() = principal(PrincipalType.ALL, emptyList())
         fun noPrincipals() = notPrincipal(PrincipalType.ALL, emptyList())
 
-        fun <S, T : ConditionOperator<S>> condition(operator: T, conditions: Map<ConditionKey<S>, List<Value<String>>>) = also { conditionals.add(Conditional(operator, conditions)) }
-        fun condition(operator: String, conditions: Map<String, List<Value<String>>>) = also { conditionals.add(conditional(operator, conditions)) }
+        fun condition(operator: String, condition: Map<String, Value<*>>) = also { conditionals.add(conditional(operator, condition)) }
+        fun conditions(operator: String, conditions: Map<String, List<Value<*>>>) = also { conditionals.add(conditionals(operator, conditions)) }
 
         fun build() = PolicyStatement(
                 action = action,
