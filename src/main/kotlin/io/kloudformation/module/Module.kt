@@ -15,9 +15,10 @@ abstract class Modification<T, R, P : Properties> {
     open var replaceWith: R? = null
     open var modifyBuilder: T.(P) -> T = { this }
     open var modifyProps: P.() -> Unit = {}
-    operator fun invoke(modify: T.(P) -> Unit) {
+    operator fun invoke(modify: T.(P) -> Unit): () -> R {
         replaceWith = null
         modifyBuilder = { modify(it); this }
+        return { item!! }
     }
     open operator fun invoke(props: P, modify: Modification<T, R, P>.(P) -> R): R {
         return if (replaceWith != null) replaceWith!! else {
@@ -84,9 +85,7 @@ open class SubModules<Builds : Module, Parts, Predefined : Properties, UserProps
 class NoPropsSubModule<Builds : Module, Parts, Predefined : Properties>(
     builder: (Predefined) -> SubModuleBuilder<Builds, Parts, Predefined>
 ) : SubModule<Builds, Parts, Predefined, NoProps>({ predefined, _ -> builder(predefined) }) {
-    operator fun invoke(modifications: Parts.(Predefined) -> Unit = {}) {
-        super.invoke(NoProps, modifications)
-    }
+    operator fun invoke(modifications: Parts.(Predefined) -> Unit = {}) = super.invoke(NoProps, modifications)
 }
 
 open class SubModule<Builds : Module, Parts, Predefined : Properties, UserProps : Properties>(
@@ -100,7 +99,7 @@ open class SubModule<Builds : Module, Parts, Predefined : Properties, UserProps 
     }
     operator fun KloudFormation.invoke(pre: Predefined): Builds? = subModule?.invoke(this, pre)
 
-    operator fun invoke(props: UserProps, modifications: Parts.(Predefined) -> Unit = {}) {
+    operator fun invoke(props: UserProps, modifications: Parts.(Predefined) -> Unit = {}): () -> Builds {
         subModule = { pre ->
             modification(pre) { preProps ->
                 modification.invoke(modifications)
@@ -111,6 +110,7 @@ open class SubModule<Builds : Module, Parts, Predefined : Properties, UserProps 
                 }
             }
         }
+        return { modification.item!! }
     }
 }
 

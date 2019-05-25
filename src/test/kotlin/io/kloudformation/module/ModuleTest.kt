@@ -55,6 +55,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create parent bucket and optional bucket`() {
         val template = KloudFormationTemplate.create {
@@ -72,6 +73,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create parent bucket with updated name from modify`() {
         val template = KloudFormationTemplate.create {
@@ -87,6 +89,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create parent bucket with updated name from props`() {
         val template = KloudFormationTemplate.create {
@@ -102,6 +105,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create child bucket with name from parent`() {
         val template = KloudFormationTemplate.create {
@@ -119,6 +123,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create child bucket with name from modification`() {
         val template = KloudFormationTemplate.create {
@@ -136,6 +141,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create child bucket with name from updated property`() {
         val template = KloudFormationTemplate.create {
@@ -153,6 +159,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create child bucket with name from modification using updated property`() {
         val template = KloudFormationTemplate.create {
@@ -173,6 +180,7 @@ class ModuleTest {
             }
         }
     }
+
     @Test
     fun `should create child buckets for nested children`() {
         val template = KloudFormationTemplate.create {

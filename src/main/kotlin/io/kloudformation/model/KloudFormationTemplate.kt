@@ -85,14 +85,15 @@ data class KloudFormationTemplate(
     class Builder(
         val awsTemplateFormatVersion: String? = "2010-09-09",
         val description: String? = null,
-        private val resources: MutableList<KloudResource<String>> = mutableListOf(),
-        private val parameters: MutableList<Parameter<*>> = mutableListOf(),
-        private val mappings: MutableList<Pair<String, Map<String, Map<String, Value<Any>>>>> = mutableListOf(),
-        private val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
-        private val outputs: MutableList<Pair<String, Output>> = mutableListOf(),
-        private var metadata: Value<JsonNode>? = null,
+        val resources: MutableList<KloudResource<String>> = mutableListOf(),
+        val parameters: MutableList<Parameter<*>> = mutableListOf(),
+        val mappings: MutableList<Pair<String, Map<String, Map<String, Value<Any>>>>> = mutableListOf(),
+        val conditions: MutableList<Pair<String, Intrinsic>> = mutableListOf(),
+        val outputs: MutableList<Pair<String, Output>> = mutableListOf(),
+        var metadata: Value<JsonNode>? = null,
         var currentDependees: List<String>? = null
     ) {
+        inline fun <reified T : KloudResource<*>> get() = resources.find { it is T }
         fun <T : KloudResource<String>> add(resource: T): T = resource.also { this.resources.add(it) }
         fun build() = KloudFormationTemplate(
                 awsTemplateFormatVersion = awsTemplateFormatVersion,
