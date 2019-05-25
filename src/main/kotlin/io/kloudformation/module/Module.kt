@@ -15,7 +15,7 @@ abstract class Modification<T, R, P : Properties> {
     open var replaceWith: R? = null
     open var modifyBuilder: T.(P) -> T = { this }
     open var modifyProps: P.() -> Unit = {}
-    operator fun invoke(modify: T.(P) -> Unit): () -> R {
+    open operator fun invoke(modify: T.(P) -> Unit): () -> R {
         replaceWith = null
         modifyBuilder = { modify(it); this }
         return { item!! }
@@ -34,6 +34,10 @@ abstract class OptionalModification<T, R, P : Properties> : Modification<T, R?, 
     private var remove = false
     fun remove() { remove = true }
     fun keep() { remove = false }
+    override operator fun invoke(modify: T.(P) -> Unit): () -> R? {
+        keep()
+        return super.invoke(modify)
+    }
     override fun invoke(props: P, modify: Modification<T, R?, P>.(P) -> R?): R? =
             if (!remove) super.invoke(props, modify) else null
 }
