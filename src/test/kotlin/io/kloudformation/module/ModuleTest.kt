@@ -11,28 +11,29 @@ import org.junit.jupiter.api.Test
 import kotlin.test.expect
 
 class TestModule(val bucket: Bucket, val optionalBucket: Bucket?, val child: TestModule?) : Module {
-    class BucketProps(var bucketName: Value<String>) : Properties
-    class Predefined(var parentName: Value<String>) : Properties
-    class Parts {
+    class BucketProps(var bucketName: Value<String>) : Properties()
+    class Predefined(var parentName: Value<String>) : Properties()
+    class Parts : io.kloudformation.module.Parts() {
         val testBucket = modification<Bucket.Builder, Bucket, BucketProps>()
         val optionalBucket = optionalModification<Bucket.Builder, Bucket, BucketProps>(absent = true)
         val child = submodule { pre: Predefined -> Builder(pre) }
     }
     class Builder(pre: Predefined) : SubModuleBuilder<TestModule, Parts, Predefined>(pre, Parts()) {
         override fun KloudFormation.buildModule(): Parts.() -> TestModule = {
-            val bucketResource = testBucket(BucketProps(pre.parentName)) { props ->
+            val bucketResource = testBucket.build(BucketProps(pre.parentName)) { props ->
                 bucket {
                     bucketName(props.bucketName)
                     modifyBuilder(props)
                 }
             }
-            val optionalBucketResource = optionalBucket(BucketProps(+"optional")) { props ->
+            val optionalBucketResource = optionalBucket.build(BucketProps(+"optional")) { props ->
                 bucket {
                     bucketName(props.bucketName)
                     modifyBuilder(props)
                 }
             }
-            val childModule = child.module(Predefined(bucketResource.bucketName!! + "-child"))()
+            val childModule = build(child, Predefined(bucketResource.bucketName!! + "-child"))
+
             TestModule(bucketResource, optionalBucketResource, childModule)
         }
     }
@@ -185,7 +186,9 @@ class ModuleTest {
     fun `should create child buckets for nested children`() {
         val template = KloudFormationTemplate.create {
             testModule("parent") {
-                child { child() }
+                child {
+                    child()
+                }
             }
         }
         with(template.resources.resources.toList()) {

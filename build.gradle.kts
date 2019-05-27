@@ -8,9 +8,9 @@ import org.jlleitschuh.gradle.ktlint.KtlintExtension
 import org.jlleitschuh.gradle.ktlint.reporter.ReporterType
 
 fun version(): String {
-    val lastVersionBuildNumber= 121
-    val buildNumber = System.getProperty("BUILD_NUM")?.let { (it.toInt() - lastVersionBuildNumber).toString() } ?: "-SNAPSHOT"
-    val version = "1.0.$buildNumber"
+    val lastVersionBuildNumber= 128
+    val buildNumber = System.getProperty("BUILD_NUM")?.let { (it.toInt() - lastVersionBuildNumber - 1).toString() } ?: "-SNAPSHOT"
+    val version = "1.1.$buildNumber"
     println("building version $version")
     return version
 }
