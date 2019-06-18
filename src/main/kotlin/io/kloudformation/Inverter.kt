@@ -36,6 +36,7 @@ import io.kloudformation.function.Reference
 import io.kloudformation.function.Select
 import io.kloudformation.function.Split
 import io.kloudformation.function.Sub
+import io.kloudformation.specification.ofType
 import org.yaml.snakeyaml.nodes.MappingNode
 import org.yaml.snakeyaml.nodes.Node
 import org.yaml.snakeyaml.nodes.ScalarNode
@@ -107,7 +108,7 @@ object Inverter {
             "\n" to "\\n",
             "\t" to "\\t",
             "\r" to "\\r",
-            "\"" to "\\",
+            "\"" to "\\\"",
             "$" to "\${'$'}",
             " " to "·"
     )
@@ -820,6 +821,7 @@ object Inverter {
             return FunSpec.builder("create")
                     .addModifiers(KModifier.OVERRIDE)
                     .receiver(KloudFormation::class)
+                    .addParameter("args", List::class ofType String::class)
                     .addCode(CodeBuilder().codeForParameters())
                     .addCode(CodeBuilder().codeForMetadata(node))
                     .addCode(CodeBuilder().codeForConditions())
@@ -885,6 +887,7 @@ object Inverter {
 
         override fun deserialize(parser: JsonParser, context: DeserializationContext): FileSpec =
                 FileSpec.builder(classPackage, fileName)
+                        .addImport("io.kloudformation", "unaryPlus")
                         .addType(classForTemplate(fileName, parser.codec.readTree(parser)))
                         .also { file -> staticImports.forEach { (pkg, name) -> file.addImport(pkg, name) } }
                         .build()
