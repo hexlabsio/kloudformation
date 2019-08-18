@@ -3,8 +3,7 @@ version: 2
 jobs:
   build:
     working_directory: ~/circleci-kloudformation-generator
-    docker:
-      - image: circleci/openjdk:8-jdk-browsers
+    machine: true
     steps:
       - checkout
       - restore_cache:
