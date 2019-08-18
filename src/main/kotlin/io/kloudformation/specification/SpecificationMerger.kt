@@ -15,11 +15,10 @@ object SpecificationMerger {
             }
         }
     }
-    fun merge(specifications: List<Specification>) =
-            specifications.reduce { mergedSpec, currentSpec ->
-                mergedSpec.copy(
-                        propertyTypes = mergedSpec.propertyTypes.merge(currentSpec.propertyTypes) { merge(it) }.orEmpty(),
-                        resourceTypes = mergedSpec.resourceTypes.merge(currentSpec.resourceTypes) { merge(it) }.orEmpty()
-                )
-            }
+    fun List<Specification>.merge() = reduce { mergedSpec, currentSpec ->
+        mergedSpec.copy(
+                propertyTypes = mergedSpec.propertyTypes.merge(currentSpec.propertyTypes) { merge(it) }.orEmpty(),
+                resourceTypes = mergedSpec.resourceTypes.merge(currentSpec.resourceTypes) { merge(it) }.orEmpty()
+        )
+    }
 }
