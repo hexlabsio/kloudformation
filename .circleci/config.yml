@@ -9,7 +9,7 @@ jobs:
       - restore_cache:
           keys:
             - gradle-{{ checksum "build.gradle.kts" }}
-      - run: ./gradlew clean build -DBUILD_NUM=$CIRCLE_BUILD_NUM
+      - run: ./gradlew -d clean build -DBUILD_NUM=$CIRCLE_BUILD_NUM
       - run: ./gradlew bintrayUpload -DBUILD_NUM=$CIRCLE_BUILD_NUM -DBINTRAY_KEY=$BINTRAY_KEY
       - store_artifacts:
           path: build/libs
