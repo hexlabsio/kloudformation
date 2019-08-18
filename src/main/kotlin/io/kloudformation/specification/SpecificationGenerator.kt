@@ -9,9 +9,7 @@ private val specificationListUrl = "https://docs.aws.amazon.com/AWSCloudFormatio
 fun main(args: Array<String>) {
     val scrapedLinks = SpecificationScraper.scrapeLinks(specificationListUrl)
     val downloadedSpecificationStrings = SpecificationDownloader.downloadAll(scrapedLinks)
-    System.err.println("EU (Stockholm) is broken!!")
     val parsedSpecifications = downloadedSpecificationStrings
-            .filter { it.key != "EU (Stockholm)" }
             .map {
                 try {
                     jacksonObjectMapper.readValue<Specification>(it.value)
