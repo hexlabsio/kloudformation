@@ -124,7 +124,7 @@ open class SubModule<Builds : Module, P : Parts, Predefined : Properties, UserPr
     private var subModule: (KloudFormation.(Predefined) -> Builds)? = null
 ) {
 
-    fun exists() = subModule == null
+    fun exists() = subModule != null
 
     fun KloudFormation.module(pre: Predefined): Builds? = subModule?.invoke(this, pre)
 
