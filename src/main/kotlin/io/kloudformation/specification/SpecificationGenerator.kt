@@ -3,7 +3,6 @@ package io.kloudformation.specification
 import com.fasterxml.jackson.databind.MapperFeature
 import com.fasterxml.jackson.module.kotlin.readValue
 import io.kloudformation.specification.SpecificationMerger.merge
-import java.lang.IllegalArgumentException
 import java.net.URL
 import java.util.zip.GZIPInputStream
 
@@ -29,11 +28,8 @@ fun main(args: Array<String>) {
 
 private fun Pair<String, String>.asSpecification() =
     try {
-        when (first) {
-            "EU (Stockholm)" -> throw IllegalArgumentException("EU Stockholm is broken. IsPrivateDnsEnabled should be PrivateDnsEnabled in AWS::EC2::VPCEndpoint")
-            "China (Ningxia)" -> throw IllegalArgumentException("China (Ningxia) is broken. IsPrivateDnsEnabled should be PrivateDnsEnabled in AWS::EC2::VPCEndpoint")
-            else -> jacksonObjectMapper.readValue<Specification>(second)
-        }
+        println("Reading $first")
+        jacksonObjectMapper.readValue<Specification>(second)
     } catch (ex: Exception) {
         System.err.println("Failed to parse $first specification")
         ex.printStackTrace()
