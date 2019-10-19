@@ -45,9 +45,9 @@ repositories {
 
 
 dependencies {
-    implementation(group = "com.fasterxml.jackson.core", name = "jackson-databind", version = jacksonVersion)
-    implementation(group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version = jacksonVersion)
-    implementation(group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version = jacksonVersion)
+    api(group = "com.fasterxml.jackson.core", name = "jackson-databind", version = jacksonVersion)
+    api(group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version = jacksonVersion)
+    api(group = "com.fasterxml.jackson.dataformat", name = "jackson-dataformat-yaml", version = jacksonVersion)
     implementation(group = "com.squareup", name = "kotlinpoet", version = kotlinpoetVersion)
     implementation(group = "org.jsoup", name = "jsoup", version = jsoupVersion)
 
