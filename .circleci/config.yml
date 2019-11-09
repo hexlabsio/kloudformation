@@ -25,7 +25,8 @@ workflows:
   version: 2
   onChange:
     jobs:
-      - build
+      - build:
+          context: hexlabs-aws
   nightly:
     triggers:
     - schedule:
@@ -35,4 +36,5 @@ workflows:
             only:
             - master
     jobs:
-    - build
+    - build:
+        context: hexlabs-aws
