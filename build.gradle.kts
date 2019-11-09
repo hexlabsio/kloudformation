@@ -43,7 +43,6 @@ repositories {
     mavenCentral()
 }
 
-
 dependencies {
     api(group = "com.fasterxml.jackson.core", name = "jackson-databind", version = jacksonVersion)
     api(group = "com.fasterxml.jackson.module", name = "jackson-module-kotlin", version = jacksonVersion)
@@ -113,7 +112,7 @@ artifacts {
 }
 
 bintray {
-    user = "hexlabs-builder"
+    user = "chrisbarbour"
     key = System.getProperty("BINTRAY_KEY") ?: "UNKNOWN"
     setPublications("mavenJava")
     publish = true
