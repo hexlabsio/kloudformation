@@ -12,15 +12,20 @@ private val specificationListUrl = "https://docs.aws.amazon.com/AWSCloudFormatio
 fun main(args: Array<String>) {
     SpecificationPoet.generate(SpecificationScraper
         .scrapeLinks(specificationListUrl)
-        .map {
-            (specificationName, specificationUrl) -> URL(specificationUrl).openStream().use {
-            stream -> System.out.println("Downloading $specificationName from $specificationUrl")
-                specificationName to if (specificationUrl.contains("gzip")) {
-                    GZIPInputStream(stream).bufferedReader().readText()
-                } else {
-                    stream.bufferedReader().readText()
-                }
-            }.asSpecification()
+        .mapNotNull { (specificationName, specificationUrl) ->
+            try {
+                URL(specificationUrl).openStream().use { stream ->
+                    System.out.println("Downloading $specificationName from $specificationUrl")
+                    specificationName to if (specificationUrl.contains("gzip")) {
+                        GZIPInputStream(stream).bufferedReader().readText()
+                    } else {
+                        stream.bufferedReader().readText()
+                    }
+                }.asSpecification()
+            } catch (e: Exception) {
+                e.printStackTrace()
+                null
+            }
         }
         .merge()
     )

@@ -83,8 +83,8 @@ data class KloudFormationTemplate(
 
     @KloudFormationDsl
     class Builder(
-        val awsTemplateFormatVersion: String? = "2010-09-09",
-        val description: String? = null,
+        var awsTemplateFormatVersion: String? = "2010-09-09",
+        var description: String? = null,
         val resources: MutableList<KloudResource<String>> = mutableListOf(),
         val parameters: MutableList<Parameter<*>> = mutableListOf(),
         val mappings: MutableList<Pair<String, Map<String, Map<String, Value<Any>>>>> = mutableListOf(),

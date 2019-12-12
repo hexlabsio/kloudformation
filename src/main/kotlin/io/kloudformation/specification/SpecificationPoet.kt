@@ -21,6 +21,7 @@ import io.kloudformation.Value
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
 import java.io.File
+import java.lang.RuntimeException
 import kotlin.reflect.KClass
 
 object SpecificationPoet {
@@ -380,12 +381,20 @@ object SpecificationPoet {
         !itemType.isNullOrEmpty() -> {
             List::class ofType (findProxy(proxies, classTypeName, itemType) ?: ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType))
         }
+        type == null -> String::class.asTypeName()
         else -> findProxy(proxies, classTypeName, type.toString()) ?: ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, type.toString())) + "." + type)
     }
 
     private fun getTypeName(types: Set<String>, classTypeName: String, propertyType: String) =
             types.filter { it == propertyType || it.endsWith(".$propertyType") }.let {
-                if (it.size > 1) it.first { it.contains(classTypeName.split("::").last().split(".").first()) } else it.first()
+                when {
+                    it.size > 1 -> it.first { it.contains(classTypeName.split("::").last().split(".").first()) }
+                    it.size == 1 -> it.first()
+                    else -> {
+                        println("Could not find type name for $classTypeName $propertyType")
+                        "kotlin.String"
+                    }
+                }
             }
 
     private fun findProxy(proxies: Map<String, TypeName>, classTypeName: String, propertyType: String) =
