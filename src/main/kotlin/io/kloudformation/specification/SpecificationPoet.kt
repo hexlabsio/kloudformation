@@ -21,7 +21,6 @@ import io.kloudformation.Value
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationTemplate
 import java.io.File
-import java.lang.RuntimeException
 import kotlin.reflect.KClass
 
 object SpecificationPoet {
