@@ -7,7 +7,7 @@ import java.net.URL
 import java.util.zip.GZIPInputStream
 
 private val jacksonObjectMapper = com.fasterxml.jackson.module.kotlin.jacksonObjectMapper().configure(MapperFeature.ACCEPT_CASE_INSENSITIVE_PROPERTIES, true)
-private val specificationListUrl = "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-resource-specification.html"
+private val specificationListUrl = "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/cfn-resource-specification.partial.html"
 
 fun main(args: Array<String>) {
     SpecificationPoet.generate(SpecificationScraper
