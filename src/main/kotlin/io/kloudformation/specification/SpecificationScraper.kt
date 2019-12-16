@@ -7,8 +7,7 @@ object SpecificationScraper {
             .select(".table-contents tr td p").toList()
             .chunked(4)
             .map {
-                listOf(it[0].text() to it[2].child(0).attr("href"))
+                it[0].text() to it[2].child(0).attr("href")
             }
-            .first()
             .toMap()
 }
