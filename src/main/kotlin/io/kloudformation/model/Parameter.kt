@@ -5,7 +5,7 @@ import io.kloudformation.KloudResource
 import io.kloudformation.Value
 
 data class Parameter<T>(
-    @JsonIgnore override val logicalName: String,
+    @JsonIgnore override var logicalName: String,
     val type: String,
     val allowedPattern: String? = null,
     val allowedValues: List<String>? = null,

@@ -493,7 +493,7 @@ object Inverter {
                     (node["NotAction"])?.let { actionsFrom(it, false) },
                     (node["Resource"])?.let { resourcesFrom(it, true) },
                     (node["NotResource"])?.let { resourcesFrom(it, false) },
-                    node["Effect"]?.textValue()?.let { "effect = IamPolicyEffect.$it" }
+                    node["Effect"]?.textValue()?.let { "effect = Effect.$it" }
             ).accumulate()
             val body = listOfNotNull(
                     node["Principal"]?.let { principalFrom(it, true) },
@@ -505,7 +505,7 @@ object Inverter {
 
         private fun CodeBuilder.policyDocOrJsonFrom(propertyName: String?, expectedTypeInfo: ResourceTypeInfo, node: JsonNode): String {
             val value = if (node.fieldsAsMap().keys.contains("Statement")) {
-                listOf("IamPolicyEffect", "PrincipalType", "policyDocument").forEach {
+                listOf("Effect", "PrincipalType", "policyDocument").forEach {
                     staticImports.add("$kPackage.model.iam" to it)
                 }
                 val parameters = listOfNotNull(

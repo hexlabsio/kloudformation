@@ -19,6 +19,7 @@ import io.kloudformation.KloudResourceBuilder
 import io.kloudformation.ResourceProperties
 import io.kloudformation.Value
 import io.kloudformation.function.Att
+import io.kloudformation.model.KloudFormationDsl
 import io.kloudformation.model.KloudFormationTemplate
 import java.io.File
 import kotlin.reflect.KClass
@@ -39,9 +40,9 @@ object SpecificationPoet {
         addSuperclassConstructorParameter("$dependsOn·=·$dependsOn")
         addSuperclassConstructorParameter("$resourceProperties·=·$resourceProperties")
 
-        addProperty(PropertySpec.builder(logicalName, String::class, KModifier.OVERRIDE).initializer(logicalName).build())
-        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).copy(true), KModifier.OVERRIDE).initializer(dependsOn).addAnnotation(JsonIgnore::class).build())
-        addProperty(PropertySpec.builder(resourceProperties, ResourceProperties::class, KModifier.OVERRIDE).initializer(resourceProperties).addAnnotation(JsonIgnore::class).build())
+        addProperty(PropertySpec.builder(logicalName, String::class, KModifier.OVERRIDE).initializer(logicalName).mutable().build())
+        addProperty(PropertySpec.builder(dependsOn, (List::class ofType String::class).copy(true), KModifier.OVERRIDE).initializer(dependsOn).addAnnotation(JsonIgnore::class).mutable().build())
+        addProperty(PropertySpec.builder(resourceProperties, ResourceProperties::class, KModifier.OVERRIDE).initializer(resourceProperties).addAnnotation(JsonIgnore::class).mutable().build())
     }
 
     private fun FunSpec.Builder.addResourceConstructorParameters() = also {
@@ -172,14 +173,14 @@ object SpecificationPoet {
         val packageName = getPackageName(isResource, typeName)
         it.builder(name.decapitalize()).also { func ->
             if (isResource) {
-                func.addCode("return add(builder(%T.create(${paramListFrom(propertyInfo, true, true, name)})).build())\n", ClassName.bestGuess("$packageName.$name"))
+                func.addCode("return add(%T.create(${paramListFrom(propertyInfo, true, true, name)}).let{builder(it); it.build()})\n", ClassName.bestGuess("$packageName.$name"))
             } else {
-                func.addCode("return builder(%T.create(${paramListFrom(propertyInfo, false)})).build()\n", ClassName.bestGuess("$packageName.$name"))
+                func.addCode("return %T.create(${paramListFrom(propertyInfo, false)}).let{ builder(it); it.build()}\n", ClassName.bestGuess("$packageName.$name"))
             }
             propertyInfo.properties.orEmpty().sorted().filter { it.value.required }.map { func.addParameter(buildParameter(types, proxies, typeName, it.key, it.value)) }
             if (isResource) func.addParameters(builderFunctionResourceParameters)
             val builderTypeName = builderClassNameFrom("$packageName.$name")
-            func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderTypeName, returnType = builderTypeName)).defaultValue("{·this·}").build())
+            func.addParameter(ParameterSpec.builder("builder", LambdaTypeName.get(builderTypeName, returnType = Unit::class.asTypeName())).defaultValue("{}").build())
         }
                 .apply { if (isResource) receiver(KloudFormationTemplate.Builder::class) }
                 .build()
@@ -228,7 +229,9 @@ object SpecificationPoet {
             .addFunction(buildCreateFunction(types, proxies, isResource, typeName, propertyInfo))
             .build()
 
-    private fun builderClass(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) = TypeSpec.classBuilder("Builder")
+    private fun builderClass(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) =
+            TypeSpec.classBuilder("Builder")
+            .addAnnotation(KloudFormationDsl::class)
             .primaryConstructor(builderConstructor(types, proxies, isResource, typeName, propertyInfo))
             .addSuperinterface(KloudResourceBuilder::class)
             .also { if (isResource) it.addProperty(PropertySpec.builder(logicalName, String::class).initializer(logicalName).build()) }
@@ -315,11 +318,11 @@ object SpecificationPoet {
                                 name = "builder",
                                 type = LambdaTypeName.get(
                                         receiver = ClassName.bestGuess("${parent.canonicalName}.Builder"),
-                                        returnType = ClassName.bestGuess("${parent.canonicalName}.Builder")
+                                        returnType = Unit::class.asTypeName()
                                 )
-                        ).defaultValue("{·this·}").build()
+                        ).defaultValue("{}").build()
                 )
-                .addCode("return ${name.decapitalize()}(%T.create(${childParams(propertyNames)}).builder().build())\n", ClassName.bestGuess(parent.canonicalName))
+                .addCode("return ${name.decapitalize()}(%T.create(${childParams(propertyNames)}).let { builder(it); it.build()})\n", ClassName.bestGuess(parent.canonicalName))
                 .build()
     }
 

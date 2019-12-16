@@ -5,15 +5,16 @@ import com.fasterxml.jackson.databind.SerializerProvider
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.ser.std.StdSerializer
 import io.kloudformation.Value
+import io.kloudformation.model.KloudFormationDsl
 
 @JsonSerialize(using = PolicyStatement.Serializer::class)
 data class PolicyStatement(
-    val action: Action,
-    val effect: IamPolicyEffect = IamPolicyEffect.Allow,
-    val resource: Resource? = null,
-    val sid: String? = null,
-    val principal: Principal? = null,
-    val condition: Condition? = null
+        val action: Action,
+        val effect: Effect = Effect.Allow,
+        val resource: Resource? = null,
+        val sid: String? = null,
+        val principal: Principal? = null,
+        val condition: Condition? = null
 ) {
 
     class Serializer : StdSerializer<PolicyStatement>(PolicyStatement::class.java) {
@@ -71,8 +72,8 @@ data class PolicyStatement(
             generator.writeEndObject()
         }
     }
-
-    data class Builder(val effect: IamPolicyEffect = IamPolicyEffect.Allow, val action: Action, val resource: Resource? = null, val sid: String? = null) {
+    @KloudFormationDsl
+    data class Builder(val effect: Effect = Effect.Allow, val action: Action, val resource: Resource? = null, val sid: String? = null) {
         var principal: Pair<PrincipalType, List<Value<String>>>? = null
         val conditionals: MutableList<Conditional> = mutableListOf()
         var notPrincipal: Boolean = false
@@ -100,7 +101,7 @@ data class PolicyStatement(
     }
 
     companion object {
-        fun create(action: Action, resource: Resource? = null, sid: String? = null, effect: IamPolicyEffect = IamPolicyEffect.Allow) =
+        fun create(action: Action, resource: Resource? = null, sid: String? = null, effect: Effect = Effect.Allow) =
                 Builder(action = action, resource = resource, sid = sid, effect = effect)
     }
 }
