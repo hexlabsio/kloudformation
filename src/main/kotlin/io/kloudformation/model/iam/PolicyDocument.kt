@@ -24,5 +24,5 @@ data class PolicyDocument(
     }
 }
 
-fun policyDocument(id: String? = null, version: String? = Version.V2.version, builder: PolicyDocument.Builder.() -> Unit)
-        = PolicyDocument.create(id, version).let { it.builder(); it.build() }
+fun policyDocument(id: String? = null, version: String? = Version.V2.version, builder: PolicyDocument.Builder.() -> Unit) =
+        PolicyDocument.create(id, version).let { it.builder(); it.build() }

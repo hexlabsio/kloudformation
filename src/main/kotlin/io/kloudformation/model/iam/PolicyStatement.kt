@@ -9,12 +9,12 @@ import io.kloudformation.model.KloudFormationDsl
 
 @JsonSerialize(using = PolicyStatement.Serializer::class)
 data class PolicyStatement(
-        val action: Action,
-        val effect: Effect = Effect.Allow,
-        val resource: Resource? = null,
-        val sid: String? = null,
-        val principal: Principal? = null,
-        val condition: Condition? = null
+    val action: Action,
+    val effect: Effect = Effect.Allow,
+    val resource: Resource? = null,
+    val sid: String? = null,
+    val principal: Principal? = null,
+    val condition: Condition? = null
 ) {
 
     class Serializer : StdSerializer<PolicyStatement>(PolicyStatement::class.java) {
