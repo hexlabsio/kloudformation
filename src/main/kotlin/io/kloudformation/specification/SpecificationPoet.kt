@@ -21,6 +21,7 @@ import io.kloudformation.Value
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationDsl
 import io.kloudformation.model.KloudFormationTemplate
+import org.jsoup.nodes.Document
 import java.io.File
 import kotlin.reflect.KClass
 
@@ -29,6 +30,8 @@ object SpecificationPoet {
     private const val logicalName = "logicalName"
     private const val dependsOn = "dependsOn"
     private const val resourceProperties = "resourceProperties"
+
+    private val cachedSites = mutableMapOf<String, Document>()
 
     private val builderFunctionResourceParameters = listOf(
             ParameterSpec.builder(logicalName, String::class.asClassName().copy(true)).defaultValue("null").build(),
@@ -96,14 +99,6 @@ object SpecificationPoet {
                     }
             )
         }
-//        println("| CloudFormation | KloudFormation |")
-//        println("|---|---|")
-//        fieldMappings.filter { it.canonicalName.startsWith("io.kloudformation.resource") }.map {
-//                it.awsTypeName.split("::").take(2).joinToString(" ") to (it.awsTypeName to it.canonicalName)
-//        }.sortedBy { it.first }.groupBy { it.first }.forEach { (group, resources) ->
-//            println("|**$group**||")
-//            resources.sortedBy { it.second.first }.forEach { (_, pair) -> println("| ${pair.first} | ${pair.second} |") }
-//        }
         return files.map { file ->
             val type = file.value.members.first { it is TypeSpec } as TypeSpec
             val propertyType = file.key
@@ -114,11 +109,11 @@ object SpecificationPoet {
                         file.value.members.filter { it is FunSpec }.map { it as FunSpec }.forEach { newFile.addFunction(it) }
                     }
                     .addType(
-                            type.toBuilder()
-                                    .primaryConstructor(type.primaryConstructor)
-                                    .addType(companionObject(typeMappings.types.keys, typeMappings.proxyTypes, isResource, propertyType, propertyInfo!!))
-                                    .addType(builderClass(typeMappings.types.keys, typeMappings.proxyTypes, isResource, propertyType, propertyInfo, fieldMappings))
-                                    .build()
+                        type.toBuilder()
+                            .primaryConstructor(type.primaryConstructor)
+                            .addType(companionObject(typeMappings.types.keys, typeMappings.proxyTypes, isResource, propertyType, propertyInfo!!))
+                            .addType(builderClass(typeMappings.types.keys, typeMappings.proxyTypes, isResource, propertyType, propertyInfo, fieldMappings))
+                            .build()
                     )
                     .build()
         }
@@ -191,11 +186,11 @@ object SpecificationPoet {
                     .addModifiers(if (!propertyInfo.properties.orEmpty().isEmpty() || isResource) KModifier.DATA else KModifier.PUBLIC)
                     .primaryConstructor(if (!propertyInfo.properties.orEmpty().isEmpty() || isResource) buildConstructor(types, proxies, isResource, typeName, propertyInfo) else null)
                     .also {
-                        if (isResource)
-                            it
-                                    .superclass(KloudResource::class ofType String::class)
+                        if (isResource) {
+                            it.superclass(KloudResource::class ofType String::class)
                                     .addSuperclassConstructorParameter("kloudResourceType·=·%S", typeName)
                                     .addResourceConstructorParameters()
+                        }
                     }
                     .addFunctions(functionsFrom(types, proxies, typeName, propertyInfo.attributes.orEmpty()))
                     .addProperties(propertyInfo.properties.orEmpty().sorted().map { buildProperty(types, proxies, typeName, it.key, it.value) })
@@ -229,6 +224,30 @@ object SpecificationPoet {
             .addFunction(buildCreateFunction(types, proxies, isResource, typeName, propertyInfo))
             .build()
 
+    private fun functionFrom(typeName: TypeName, name: String, documentationUrl: String): FunSpec {
+//        val description = if (documentationUrl.isNotEmpty() && typeName.toString() != "io.kloudformation.property.aws.ecr.repository.LifecyclePolicy") {
+//            val documentationLocation = documentationUrl.substringBefore(".html") + ".partial.html"
+//            val itemLocation = documentationUrl.substringAfter('#')
+//            val docs = if (cachedSites.containsKey(documentationLocation)) {
+//                cachedSites[documentationLocation]!!
+//            } else {
+//                println("Downloading $documentationLocation")
+//                val doc = Jsoup.connect(documentationLocation).get()
+//                cachedSites[documentationLocation] = doc
+//                doc
+//            }
+//            docs.getElementsByClass("variablelist").firstOrNull()?.child(0)?.children()?.let {
+//                it[it.indexOf(it.find { it.child(0).id() == itemLocation }) + 1].children().map { it.text() }.joinToString("\n")
+//            }
+//        } else null
+
+        return FunSpec.builder(name)
+//                .also { func -> description?.let { func.addKdoc("%L", it.replace("*/", "*`/").replace("/*", "/`*").replace("[\$", "[\\\$").replace("{", "").replace("}", "")) } }
+                .addParameter(name, typeName)
+                .addCode("return also·{ it.$name·=·$name }\n")
+                .build()
+    }
+
     private fun builderClass(types: Set<String>, proxies: Map<String, TypeName>, isResource: Boolean, typeName: String, propertyInfo: PropertyInfo, typeMappings: List<TypeInfo>) =
             TypeSpec.classBuilder("Builder")
             .addAnnotation(KloudFormationDsl::class)
@@ -251,10 +270,7 @@ object SpecificationPoet {
                                     if (proxy == null) typeSetterFunction(it.key, it.key, typeName, typeMappings)
                                     else null
                                 } else null,
-                                FunSpec.builder(it.key.decapitalize())
-                                        .addParameter(it.key.decapitalize(), getType(types, proxies, typeName, it.value))
-                                        .addCode("return also·{ it.${it.key.decapitalize()}·=·${it.key.decapitalize()} }\n")
-                                        .build()
+                                functionFrom(getType(types, proxies, typeName, it.value), it.key.decapitalize(), it.value.documentation)
                         )
                     } + listOf(
                             FunSpec.builder("build")
