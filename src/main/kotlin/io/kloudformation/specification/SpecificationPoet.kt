@@ -21,6 +21,7 @@ import io.kloudformation.Value
 import io.kloudformation.function.Att
 import io.kloudformation.model.KloudFormationDsl
 import io.kloudformation.model.KloudFormationTemplate
+import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import java.io.File
 import kotlin.reflect.KClass
@@ -225,24 +226,24 @@ object SpecificationPoet {
             .build()
 
     private fun functionFrom(typeName: TypeName, name: String, documentationUrl: String): FunSpec {
-//        val description = if (documentationUrl.isNotEmpty() && typeName.toString() != "io.kloudformation.property.aws.ecr.repository.LifecyclePolicy") {
-//            val documentationLocation = documentationUrl.substringBefore(".html") + ".partial.html"
-//            val itemLocation = documentationUrl.substringAfter('#')
-//            val docs = if (cachedSites.containsKey(documentationLocation)) {
-//                cachedSites[documentationLocation]!!
-//            } else {
-//                println("Downloading $documentationLocation")
-//                val doc = Jsoup.connect(documentationLocation).get()
-//                cachedSites[documentationLocation] = doc
-//                doc
-//            }
-//            docs.getElementsByClass("variablelist").firstOrNull()?.child(0)?.children()?.let {
-//                it[it.indexOf(it.find { it.child(0).id() == itemLocation }) + 1].children().map { it.text() }.joinToString("\n")
-//            }
-//        } else null
+        val description = if (documentationUrl.isNotEmpty() && name != "registryId") {
+            val documentationLocation = documentationUrl.substringBefore(".html") + ".partial.html"
+            val itemLocation = documentationUrl.substringAfter('#')
+            val docs = if (cachedSites.containsKey(documentationLocation)) {
+                cachedSites[documentationLocation]!!
+            } else {
+                println("Downloading $documentationLocation")
+                val doc = Jsoup.connect(documentationLocation).get()
+                cachedSites[documentationLocation] = doc
+                doc
+            }
+            docs.getElementsByClass("variablelist").firstOrNull()?.child(0)?.children()?.let {
+                it[it.indexOf(it.find { it.child(0).id() == itemLocation }) + 1].children().map { it.text() }.joinToString("\n")
+            }
+        } else null
 
         return FunSpec.builder(name)
-//                .also { func -> description?.let { func.addKdoc("%L", it.replace("*/", "*`/").replace("/*", "/`*").replace("[\$", "[\\\$").replace("{", "").replace("}", "")) } }
+                .also { func -> description?.let { func.addKdoc("%L", it.replace("*/", "*`/").replace("/*", "/`*").replace("[\$", "[\\\$").replace("{", "").replace("}", "")) } }
                 .addParameter(name, typeName)
                 .addCode("return also·{ it.$name·=·$name }\n")
                 .build()
