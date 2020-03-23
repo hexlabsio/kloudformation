@@ -225,8 +225,7 @@ object SpecificationPoet {
             .addFunction(buildCreateFunction(types, proxies, isResource, typeName, propertyInfo))
             .build()
 
-    private fun functionFrom(typeName: TypeName, name: String, documentationUrl: String): FunSpec {
-        val description = if (documentationUrl.isNotEmpty() && name != "registryId") {
+    private fun kDocFor(name: String, documentationUrl: String) = if (documentationUrl.isNotEmpty() && name != "registryId") {
             val documentationLocation = documentationUrl.substringBefore(".html") + ".partial.html"
             val itemLocation = documentationUrl.substringAfter('#')
             val docs = if (cachedSites.containsKey(documentationLocation)) {
@@ -238,12 +237,13 @@ object SpecificationPoet {
                 doc
             }
             docs.getElementsByClass("variablelist").firstOrNull()?.child(0)?.children()?.let {
-                it[it.indexOf(it.find { it.child(0).id() == itemLocation }) + 1].children().map { it.text() }.joinToString("\n")
+                it[it.indexOf(it.find { it.child(0).id() == itemLocation }) + 1].children().map { it.text() }.joinToString("\n").replace("*/", "*`/").replace("/*", "/`*").replace("[\$", "[\\\$").replace("{", "").replace("}", "")
             }
         } else null
 
+    private fun functionFrom(typeName: TypeName, name: String, documentationUrl: String): FunSpec {
         return FunSpec.builder(name)
-                .also { func -> description?.let { func.addKdoc("%L", it.replace("*/", "*`/").replace("/*", "/`*").replace("[\$", "[\\\$").replace("{", "").replace("}", "")) } }
+                .also { func -> kDocFor(name, documentationUrl)?.let { func.addKdoc("%L", it) } }
                 .addParameter(name, typeName)
                 .addCode("return also·{ it.$name·=·$name }\n")
                 .build()
@@ -264,11 +264,11 @@ object SpecificationPoet {
                     propertyInfo.properties.orEmpty().filter { !it.value.required }.flatMap {
                         listOfNotNull(
                                 if (it.value.itemType == null && (it.value.primitiveType != null || it.value.primitiveItemType != null))
-                                    primitiveSetterFunction(it.key.decapitalize(), it.value, getType(types, proxies, typeName, it.value, wrapped = false))
+                                    primitiveSetterFunction(it.key.decapitalize(), it.value, getType(types, proxies, typeName, it.value, wrapped = false), it.value.documentation)
                                 else null,
                                 if (it.value.primitiveType == null && it.value.primitiveItemType == null && it.value.itemType == null && it.value.type != null) {
                                     val proxy = findProxy(proxies, typeName, it.value.type!!)
-                                    if (proxy == null) typeSetterFunction(it.key, it.key, typeName, typeMappings)
+                                    if (proxy == null) typeSetterFunction(it.key, it.key, typeName, typeMappings, it.value.documentation)
                                     else null
                                 } else null,
                                 functionFrom(getType(types, proxies, typeName, it.value), it.key.decapitalize(), it.value.documentation)
@@ -309,8 +309,9 @@ object SpecificationPoet {
         return funSpec.build()
     }
 
-    private fun primitiveSetterFunction(name: String, property: Property, type: TypeName) = FunSpec.builder(name + if (property.type == "Map") "Map" else "")
+    private fun primitiveSetterFunction(name: String, property: Property, type: TypeName, documentationUrl: String) = FunSpec.builder(name + if (property.type == "Map") "Map" else "")
             .addParameter(name, type)
+            .also { func -> kDocFor(name, documentationUrl)?.let { func.addKdoc("%L", it) } }
             .also {
                 if (property.primitiveItemType != null) {
                     if (property.type == "Map") it.addCode("return also·{ it.$name·= $name.orEmpty().map·{ it.key to %T(it.value) }.toMap() }\n", Value.Of::class)
@@ -323,12 +324,12 @@ object SpecificationPoet {
 
     private fun childParams(parameters: Collection<String>) = parameters.foldIndexed("") { index, acc, parameter -> acc + (if (index != 0) ", " else "") + parameter }
 
-    private fun typeSetterFunction(name: String, propertyType: String, typeName: String, typeMappings: List<TypeInfo>): FunSpec {
+    private fun typeSetterFunction(name: String, propertyType: String, typeName: String, typeMappings: List<TypeInfo>, documentationUrl: String): FunSpec {
         val parent = (typeMappings.find { it.awsTypeName == typeName }!!.properties.find { it.name == propertyType.decapitalize() && it.typeName.toString().startsWith("io") }!!.typeName as ClassName)
         val requiredProperties = typeMappings.find { it.canonicalName == parent.canonicalName }!!.properties.filter { !it.typeName.isNullable }
         val propertyNames = requiredProperties.map { it.name }
-
         return FunSpec.builder(name.decapitalize())
+                .also { func -> kDocFor(name, documentationUrl)?.let { func.addKdoc("%L", it) } }
                 .addParameters(requiredProperties.map { ParameterSpec.builder(it.name, it.typeName).build() })
                 .addParameter(
                         ParameterSpec.builder(
@@ -398,7 +399,8 @@ object SpecificationPoet {
             }
         }
         !itemType.isNullOrEmpty() -> {
-            List::class ofType (findProxy(proxies, classTypeName, itemType) ?: ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType))
+            if (itemType == "Json") List::class ofType valueTypeName(itemType, true)
+            else List::class ofType (findProxy(proxies, classTypeName, itemType) ?: ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, itemType.toString())) + "." + itemType))
         }
         type == null -> String::class.asTypeName()
         else -> findProxy(proxies, classTypeName, type.toString()) ?: ClassName.bestGuess(getPackageName(false, getTypeName(types, classTypeName, type.toString())) + "." + type)
