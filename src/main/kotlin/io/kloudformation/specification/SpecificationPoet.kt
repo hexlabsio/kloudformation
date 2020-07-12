@@ -125,13 +125,14 @@ object SpecificationPoet {
         generateSpecs(specification).forEach { it.writeTo(File(System.getProperty("user.dir") + "/build/generated")) }
     }
 
-    data class Info(val type: String, val name: String, val resource: Boolean, val required: Map<String, String>, val notRequired: Map<String, String>)
+    data class Info(val type: String, val name: String, val resource: Boolean, val required: Map<String, String>, val notRequired: Map<String, String>, val attributes: Map<String, String> = emptyMap())
 
     private fun infoFrom(types: Set<String>, proxies: Map<String, TypeName>, resource: Boolean, typeName: String, propertyInfo: PropertyInfo): Info {
         val properties = propertyInfo.properties.orEmpty().run { filter { it.value.required } to filter { !it.value.required } }
         return Info(typeName, getClassName(typeName), resource,
                 properties.first.map { it.key.decapitalize() to awsNameFor(getType(types, proxies, typeName, it.value).toString()) }.toMap(),
-                properties.second.map { it.key.decapitalize() to awsNameFor(getType(types, proxies, typeName, it.value).toString()) }.toMap()
+                properties.second.map { it.key.decapitalize() to awsNameFor(getType(types, proxies, typeName, it.value).toString()) }.toMap(),
+                propertyInfo.attributes.orEmpty().map { (key, value) -> key to awsNameFor(getType(types, proxies, typeName, value).toString()) }.toMap()
         )
     }
 
